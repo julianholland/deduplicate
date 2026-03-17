@@ -1,0 +1,13 @@
+README.md
+pyproject.toml
+src/deduplicate/__init__.py
+src/deduplicate.egg-info/PKG-INFO
+src/deduplicate.egg-info/SOURCES.txt
+src/deduplicate.egg-info/dependency_links.txt
+src/deduplicate.egg-info/top_level.txt
+src/deduplicate/core/__init__.py
+src/deduplicate/core/duplicate_detection_algorihtm.py
+src/deduplicate/plugins/__init__.py
+src/deduplicate/plugins/duplicate_detection_algorithms/__init__.py
+src/deduplicate/plugins/duplicate_detection_algorithms/distance_matrix.py
+src/plugins/duplicate_detection_algorithms/distance_matrix.py

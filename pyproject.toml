@@ -1,0 +1,19 @@
+[project]
+name = "deduplicate"
+dynamic = ["version"]
+description = "A Python package for deduplicating data."
+authors = [
+    { name="Julian Holland", email="holland@fhi.mpg.de" }
+]
+readme = "README.md"
+requires-python = ">=3.8"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.dynamic]
+version = {attr = "deduplicate.__version__"}
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
