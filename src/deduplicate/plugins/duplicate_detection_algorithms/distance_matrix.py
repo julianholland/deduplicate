@@ -2,6 +2,7 @@ from deduplicate.core.duplicate_detection_algorithm import DuplicateDetectionAlg
 from deduplicate.core.plugin_registry import register_plugin
 import numpy as np
 
+
 @register_plugin(kind="duplicate_detection_algorithm", name="distance_matrix")
 class DistanceMatrix(DuplicateDetectionAlgorithm):
     def __init__(
@@ -12,11 +13,13 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
         distance_matrix: np.ndarray = np.array([]),
         distance_metric: str = "euclidean",
     ) -> None:
-        super().__init__(tolerance, input_vector, dataset_array, distance_matrix, distance_metric)
-        
+        super().__init__(
+            tolerance, input_vector, dataset_array, distance_matrix, distance_metric
+        )
+
     def __str__(self) -> str:
         return f"DistanceMatrix(tolerance={self.tolerance}, distance_metric={self.distance_metric})"
-        
+
     def duplicate_check(self) -> np.bool_:
         return np.any(self.get_new_distance_matrix_column() < self.tolerance)
 
