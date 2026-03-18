@@ -28,4 +28,5 @@ def test_missing_plugin_raises():
 def test_invalid_kind_raises():
     with pytest.raises(ValueError):
         @register_plugin("invalid_kind", "x")
-        class _Bad: pass
+        class _Bad:
+            pass

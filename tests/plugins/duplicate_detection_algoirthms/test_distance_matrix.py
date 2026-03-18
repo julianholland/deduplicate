@@ -1,5 +1,3 @@
-from ase.geometry import distance
-
 from deduplicate.plugins.duplicate_detection_algorithms.distance_matrix import (
     DistanceMatrix,
 )
