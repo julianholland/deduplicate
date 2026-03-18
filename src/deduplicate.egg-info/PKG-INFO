@@ -5,6 +5,10 @@ Summary: A Python package for deduplicating data.
 Author-email: Julian Holland <holland@fhi.mpg.de>
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-mock; extra == "dev"
+Requires-Dist: coverage; extra == "dev"
 
 <div align="center">
   <h1><code>deduplicate</code> 📉</h1>

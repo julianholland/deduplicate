@@ -1,6 +1,8 @@
 from deduplicate.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
+from deduplicate.core.plugin_registry import register_plugin
 import numpy as np
 
+@register_plugin(kind="duplicate_detection_algorithm", name="multi_hashing")
 class MultiHashing(DuplicateDetectionAlgorithm):
     def __init__(
         self,
@@ -65,33 +67,15 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         """
         hash_vector= self.create_hash_vector(self.input_vector)
 
-        clash_vector = np.zeros(len(input_global_descriptor), dtype=bool)
-            for hash_index, hash_value in enumerate(hash_vector):
-                if hash_value in self.global_descriptor_array[hash_index]:
-                    clash_vector[hash_index] = True
-        clash_array=np.zeros()
-        for i in range(self.perturbations):
-            if hash_vector[i] in self.dataset_array[:, i]:
-                match_count += 1
-        if match_count >= self.acceptance_threshold:
-            return True
-        return False
+        clash_vector = np.zeros(self.perturbations, dtype=bool)
+        for hash_index, hash_value in enumerate(hash_vector):
+            if hash_value in self.hash_vector_array[hash_index]:
+                clash_vector[hash_index] = True
+        duplicate_vote_array = np.sum(clash_vector) / self.perturbations
+        
+        duplicate_structure = duplicate_vote_array >= self.acceptance_threshold
 
-        initial_add = np.all(self.global_descriptor_array == 0)
-
-        if not initial_add:
-            
-
-            uniqueness_vote_array = 1 - (
-                np.sum(clash_vector) / len(input_global_descriptor)
-            )  # 1 means completely unique, 0 means completely not unique
-
-            unique_structure = uniqueness_vote_array >= self.acceptance_rate
-        else:  # condition for starting with empty hash dict
-            uniqueness_vote_array = np.array([1.0])
-            unique_structure = True
-
-        return bool(unique_structure)
+        return bool(duplicate_structure)
 
     def get_dataset_unique_structures(self) -> int:
         unique_structures = 0

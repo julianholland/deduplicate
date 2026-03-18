@@ -1,19 +1,21 @@
 import numpy as np
 from abc import ABC, abstractmethod
+
 class DuplicateDetectionAlgorithm(ABC):
     def __init__(
         self,
         tolerance: float,
         input_vector: np.ndarray,
         dataset_array: np.ndarray,
-        distance_metric: str = "euclidean",
         distance_matrix: np.ndarray = np.array([]),
+        distance_metric: str = "euclidean",
     ) -> None:
         self.tolerance = tolerance
         self.input_vector = input_vector
         self.dataset_array = dataset_array
-        self.distance_metric = distance_metric
         self.distance_matrix = distance_matrix
+        self.distance_metric = distance_metric
+    
     
     def calculate_distance(self, vector1: np.ndarray, vector2: np.ndarray) -> float:
         if self.distance_metric == "euclidean":
