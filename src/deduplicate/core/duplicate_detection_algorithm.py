@@ -24,8 +24,8 @@ class DuplicateDetectionAlgorithm(ABC):
     def __init__(
         self,
         tolerance: float,
-        input_vector: np.ndarray,
-        dataset_array: np.ndarray,
+        input_vector: np.ndarray = np.array([]),
+        dataset_array: np.ndarray = np.array([]),
         distance_matrix: np.ndarray = np.array([]),
         distance_metric: str = "euclidean",
     ) -> None:

@@ -3,6 +3,8 @@ from typing import Dict, Type
 
 _REGISTRY: Dict[str, Dict[str, Type]] = {
     "duplicate_detection_algorithm": {},
+    "tolerance_calculator": {},
+    "benchmark": {},
 }
 
 
