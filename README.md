@@ -15,5 +15,5 @@
 ## Implemented Algorithms
 
 - Distance Matrix (Simple, accurate, expensive): Computes the distance matrix for all vectors and determines duplicates by finding those that fall below a given distance
-- Multi Hashing (Fast): Smears and rounds the vectors using a normal distribution and computes the hashes for each which are then used to determine duplicates by proportion of hash clashes. (not yet implemented)
+- Multi Hashing (Fast): Smears and rounds the vectors using a normal distribution and computes the hashes for each which are then used to determine duplicates by proportion of hash clashes.
 - Locality Sensitive Hashing (Fast, Accurate)

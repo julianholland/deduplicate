@@ -16,5 +16,3 @@ class DummyDDA(DuplicateDetectionAlgorithm):
 
 @pytest.fixture
 def dummy_dda(): return DummyDDA(tolerance=0.1, input_vector=np.array([1.0, 2.0]), dataset_array=np.array([[1.0, 2.0]]))
-
-

@@ -17,27 +17,25 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
             tolerance, input_vector, dataset_array, distance_matrix, distance_metric
         )
         
-
     def __str__(self) -> str:
         return f"DistanceMatrix(tolerance={self.tolerance}, distance_metric={self.distance_metric})"
 
-    def duplicate_check(self) -> np.bool_:
-        
+    def _ensure_distance_matrix(self):
         if self.distance_matrix.shape[0] != self.dataset_array.shape[0]:
             warnings.warn("Distance matrix shape does not match dataset; recomputing.")
-            self.compute_distance_matrix()
+            self.compute_distance_matrix(self.dataset_array)
+            
 
-        return np.any(self.get_new_distance_matrix_column() < self.tolerance)
+    def duplicate_check(self) -> bool:
+        return bool(np.any(self.get_new_distance_matrix_column(self.dataset_array) < self.tolerance))
 
     def get_dataset_unique_structures(self) -> int:
-        if self.distance_matrix.shape[0] != self.dataset_array.shape[0]:
-            warnings.warn("Distance matrix shape does not match dataset; recomputing.")
-            self.compute_distance_matrix()
-
+        self._ensure_distance_matrix()
         unique_structures = 0
         for i in range(self.distance_matrix.shape[0]):
             if np.all(self.distance_matrix[i][not i] >= self.tolerance):
                 unique_structures += 1
+        print(self.distance_matrix)
         return unique_structures
 
     

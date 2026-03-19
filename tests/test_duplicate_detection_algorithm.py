@@ -59,19 +59,21 @@ def test_calculate_distance(dummy_dda):
             dummy_dda.calculate_distance(permanent_vector, variable_vector[i])
             for i in range(variable_vector.shape[0])
         ]
+        print(f"Results: {results}")
+        print(f"Expected: {expected_results}")
         assert np.allclose(results, expected_results, atol=tolerance)
 
 def test_compute_distance_matrix(dummy_dda):
-    dummy_dda.compute_distance_matrix()
+    dummy_dda.compute_distance_matrix(dummy_dda.dataset_array)
     assert dummy_dda.distance_matrix.shape == (1, 1)
     assert np.isclose(dummy_dda.distance_matrix[0, 0], 0.0)
 
 def test_get_new_distance_matrix_column(dummy_dda):
-    new_distances = dummy_dda.get_new_distance_matrix_column()
+    new_distances = dummy_dda.get_new_distance_matrix_column(dummy_dda.dataset_array)
     assert new_distances.shape == (1,)
     assert np.isclose(new_distances[0], 0.0)
 
 def test_add_new_vector_to_distance_matrix(dummy_dda):
-    dummy_dda.compute_distance_matrix()
-    dummy_dda.add_new_vector_to_distance_matrix()
+    dummy_dda.compute_distance_matrix(dummy_dda.dataset_array)
+    dummy_dda.add_new_vector_to_distance_matrix(dummy_dda.dataset_array)
     assert dummy_dda.distance_matrix.shape == (2, 2)

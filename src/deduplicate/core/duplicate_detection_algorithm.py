@@ -33,12 +33,24 @@ class DuplicateDetectionAlgorithm(ABC):
         self.input_vector = input_vector
         self.dataset_array = dataset_array
         self.distance_matrix = distance_matrix
-        
-        if distance_metric not in self.ALLOWED_DISTANCES:
-            raise ValueError(f"Unsupported distance metric: {distance_metric}, supported metrics are: {list(self.ALLOWED_DISTANCES.keys())}")
         self.distance_metric = distance_metric
-        self.distance_function = self.ALLOWED_DISTANCES[self.distance_metric]
 
+    # In DuplicateDetectionAlgorithm
+
+    @property
+    def distance_metric(self):
+        return self._distance_metric
+
+    @distance_metric.setter
+    def distance_metric(self, value):
+        if value not in self.ALLOWED_DISTANCES:
+            raise ValueError(
+                f"Unsupported distance metric: {value}, "
+                f"supported metrics are: {list(self.ALLOWED_DISTANCES.keys())}"
+            )
+        self._distance_metric = value
+        self.distance_function = self.ALLOWED_DISTANCES[value]
+        
     def calculate_distance(self, vector1: np.ndarray, vector2: np.ndarray) -> float:
         return self.distance_function(vector1, vector2)
 
