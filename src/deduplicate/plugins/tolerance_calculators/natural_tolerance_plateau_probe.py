@@ -10,69 +10,88 @@ import warnings
 @register_plugin("tolerance_calculator", "natural_tolerance_plateau_probe")
 class NaturalTolerancePlateauProbe(ToleranceCalculator):
     def __init__(
-        self, 
-        dataset_array: np.ndarray, 
+        self,
+        dataset_array: np.ndarray,
         duplicate_detection_algorithm_object: DuplicateDetectionAlgorithm,
-        perturbed_dataset: np.ndarray = np.array([]),
+        tolerance_dataset_array: np.ndarray,
+        perturbations_per_vector: int = 1,
+        perturbation_scale: float = 0.1,
         binary_search_steps: int = 50,
+        probe_steps: int = 100,
     ) -> None:
         super().__init__(
             dataset_array=dataset_array,
             duplicate_detection_algorithm_object=duplicate_detection_algorithm_object,
-            perturbed_dataset=perturbed_dataset,
-            
+            tolerance_dataset_array=tolerance_dataset_array,
+            perturbations_per_vector=perturbations_per_vector,
+            perturbation_scale=perturbation_scale,
+            binary_search_steps=binary_search_steps,
         )
-        self.perturbed_dataset = perturbed_dataset
-        self.binary_search_steps = binary_search_steps
+        self.probe_steps = probe_steps
 
-    def _ensure_perturbed_dataset(self):
-        if self.perturbed_dataset.shape[0] != len(self.dataset_array) * self.perturbations_per_vector:
-            warnings.warn("Perturbed dataset is not properly initialized. Recreating it.\nEnsure a perturbed dataset is set prior finding tolerance.")
-            self.create_perturbed_dataset()
-    
-
-    def tolerance_probe(self, lower_tolerance: float, upper_tolerance: float, tolerance_steps: float) -> dict:
+    def tolerance_probe(
+        self, lower_tolerance: float, upper_tolerance: float, tolerance_steps: float
+    ) -> dict:
         tolerance_results = {}
-        
-        for tol in np.linspace(lower_tolerance, upper_tolerance, tolerance_steps):
-            self.duplicate_detection_algorithm_object.tolerance = tol
-            unique_structures = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-            tolerance_results[tol] = unique_structures
-        return tolerance_results
+        with self.temp_attr(
+            self.duplicate_detection_algorithm_object,
+            "dataset_array",
+            self.tolerance_dataset_array,
+        ):
+            for tol in np.linspace(lower_tolerance, upper_tolerance, tolerance_steps):
+                with self.temp_attr(
+                    self.duplicate_detection_algorithm_object, "tolerance", tol
+                ):
+                    self.duplicate_detection_algorithm_object.tolerance = tol
+                    unique_structures = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
+                    tolerance_results[tol] = unique_structures
+            return tolerance_results
 
-
-    def find_plateaus(self, tolerance_results: dict) -> tuple: # check this ai slop
-        dataset_size = len(self.dataset_array)
-        datapoints_to_calculate_gradient = min(5, dataset_size - 1)
+    def find_plateaus(self, tolerance_results: dict, datapoints_to_calculate_gradient: int = 3, plateau_threshold: float = 1e-3) -> tuple:  
         sorted_tols = sorted(tolerance_results.keys())
         unique_counts = [tolerance_results[tol] for tol in sorted_tols]
 
+        # detect plateaus by calculating the gradient of unique_counts with respect to tolerance and finding where it is close to zero
         plateau_log = np.zeros(len(sorted_tols), dtype=bool)
-        for i in range(1, len(unique_counts)-datapoints_to_calculate_gradient):
-            gradient = (unique_counts[i + datapoints_to_calculate_gradient] - unique_counts[i]) / (sorted_tols[i + datapoints_to_calculate_gradient] - sorted_tols[i])
-            if abs(gradient) < 1e-3:  # Threshold for plateau detection
+        for i in range(len(unique_counts) - datapoints_to_calculate_gradient):
+            gradient = (
+                unique_counts[i + datapoints_to_calculate_gradient] - unique_counts[i]
+            ) / (sorted_tols[i + datapoints_to_calculate_gradient] - sorted_tols[i])
+            if abs(gradient) < plateau_threshold:  # Threshold for plateau detection
                 plateau_log[i] = True
 
-        plateau_lengths=[]
+        # Record the start and end of each plateau and its length
+        plateau_lengths = []
         for i in range(len(plateau_log)):
             if plateau_log[i]:
-                if not plateau_log[i-1]:
+                if not plateau_log[i - 1]:
                     start = i
             else:
-                if plateau_log[i-1]:
+                if plateau_log[i - 1]:
                     end = i
-                    plateau_lengths.append((sorted_tols[start], sorted_tols[end], end - start))
+                    plateau_lengths.append(
+                        (sorted_tols[start], sorted_tols[end], end - start)
+                    )
 
         return plateau_lengths
-        
+
     def calculate_tolerance(self) -> float:
         self._ensure_perturbed_dataset()
-        all_same_tolerance = self.binary_search_tolerance(target_structures=1, find_largest_tolerance_for_target=False)
-        all_different_tolerance = self.binary_search_tolerance(target_structures=len(self.dataset_array), find_largest_tolerance_for_target=True)
-        probe_results = self.tolerance_probe(all_same_tolerance, all_different_tolerance, self.binary_search_steps)
+        all_same_tolerance = self.binary_search_tolerance(
+            target_structures=1, find_largest_tolerance_for_target=False
+        )
+        all_different_tolerance = self.binary_search_tolerance(
+            target_structures=len(self.tolerance_dataset_array),
+            find_largest_tolerance_for_target=True,
+        )
+        probe_results = self.tolerance_probe(
+            all_same_tolerance, all_different_tolerance, self.probe_steps
+        )
         plateaus = self.find_plateaus(probe_results)
         if len(plateaus) == 0:
-            warnings.warn("No plateaus found in tolerance probe. Consider adding in perturbed structures and/or increasing dataset size.\nReturning average of all same and all different tolerance as fallback.")
+            warnings.warn(
+                "No plateaus found in tolerance probe. Consider adding in perturbed structures and/or increasing dataset size.\nReturning average of all same and all different tolerance as fallback."
+            )
             return (all_same_tolerance + all_different_tolerance) / 2
         else:
             longest_plateau = max(plateaus, key=lambda x: x[2])
