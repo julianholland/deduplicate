@@ -38,6 +38,7 @@ class ToleranceCalculator(ABC):
         Binary search to find the tolerance that yields the target number of unique structures.
         """
         best_min = 0.0
+        print(self.tolerance_dataset_array)
         best_max = np.max(self.tolerance_dataset_array) - np.min(
             self.tolerance_dataset_array
         )
@@ -46,6 +47,10 @@ class ToleranceCalculator(ABC):
         exact_list = []
         all_diff_dict = {}
 
+        if self.binary_search_steps <= 0:
+            warnings.warn(f"Binary search called with {self.binary_search_steps} steps. No binary search performed.\n Returning tolerance of half the range of the perturbed dataset: {tolerance}.")
+            return tolerance
+        
         # temporarily set the dataset_array to the tolerance_dataset_array for the duration of the search
         with self.temp_attr(
             self.duplicate_detection_algorithm_object,
@@ -80,7 +85,7 @@ class ToleranceCalculator(ABC):
                             best_max = tolerance
 
                     tolerance = (best_min + best_max) / 2
-
+                    
         # Find the best exact value if it exists, otherwise find the closest value
         if len(exact_list) > 0:
             if find_largest_tolerance_for_target:
