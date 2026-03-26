@@ -4,9 +4,14 @@
 </div>
 
 ***
-
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/julianholland/deduplicate)
 [![codecov](https://codecov.io/gh/julianholland/deduplicate/graph/badge.svg?token=JL3OTRCXZD)](https://codecov.io/gh/julianholland/deduplicate)
-
+[![PyPI version](https://badge.fury.io/py/deduplicate_lib.svg)](https://badge.fury.io/py/deduplicate_lib)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/julianholland/deduplicate/actions/workflows/ci.yml/badge.svg)](https://github.com/julianholland/deduplicate/actions/workflows/ci.yml)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+<!-- [![Documentation Status](https://readthedocs.org/projects/alomancy/badge/?version=latest)](https://alomancy.readthedocs.io/en/latest/index.html) -->
 
 ## Key Features
 
@@ -45,3 +50,82 @@ print(dda.get_dataset_unique_structures())
 ```
 
 A more detailed example can be seen in the `examples` directory
+
+### Dependencies
+
+- Python 3.9+
+- `numpy`
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/julianholland/deduplicate.git
+cd deduplicate
+
+# Install in development mode
+pip install -e ".[dev]"
+
+# Run tests
+pytest
+
+# Run linting
+ruff check .
+ruff format .
+```
+
+### Running Tests
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test categories
+pytest tests/core/
+pytest tests/plugins/
+pytest tests/plugins/duplicate_detection_algorithms/distance_matrix
+
+# Run with coverage
+pytest --cov
+```
+
+## 📝 Citation
+
+If you use deduplicate_lib in your research, please cite:
+
+```bibtex
+@software{alomancy2025,
+  title={Deduplicate_lib: Auto Tolerance Finding Deduplication Algorithms in Python},
+  author={Julian Holland},
+  year={2026},
+  url={https://github.com/julianholland/deduplicate},
+  version={0.1.0}
+}
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- The Fritz Haber Institute
+- Juan Manuel Lombardi <3
+
+
+## Project Links
+
+- [GitHub Repository](https://github.com/julianholland/deduplicate)
+
+## Project To-Do
+
+- [ ] Add example.ipynb
+- [ ] Add benchmarks for time and robustness
+- [ ] Add Locality-Sensitive Hashing as an option
+- [ ] Speedup slow tasks with Numba
+- [ ] Set up Read the Docs
+- [ ] Create general deduplicate function

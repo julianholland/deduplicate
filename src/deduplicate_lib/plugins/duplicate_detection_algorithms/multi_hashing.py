@@ -6,7 +6,15 @@ from deduplicate_lib.core.plugin_registry import register_plugin
 
 import numpy as np
 import warnings
+from numba import njit
 
+@njit
+def fast_round_and_perturb(input_vector, perturbation_array, tolerance):
+    rounded_vector = np.round(input_vector / tolerance) * tolerance
+    round_and_perturb_array = np.zeros((perturbation_array.shape[0], len(input_vector)))
+    for i in range(perturbation_array.shape[0]):
+        round_and_perturb_array[i] = rounded_vector * perturbation_array[i]
+    return round_and_perturb_array
 
 @register_plugin(kind="duplicate_detection_algorithm", name="multi_hashing")
 class MultiHashing(DuplicateDetectionAlgorithm):
@@ -60,11 +68,10 @@ class MultiHashing(DuplicateDetectionAlgorithm):
 
     def create_hash_vector(self) -> np.ndarray:
         self._ensure_perturbation_array()
-        hash_vector = np.zeros(self.perturbations)
+        rounded_and_perturbed = fast_round_and_perturb(self.input_vector, self.perturbation_array, self.tolerance)
+        hash_vector = np.zeros(self.perturbations, dtype=int)
         for i in range(self.perturbations):
-            hash_vector[i] = hash(
-                (self.round_to_tolerance() * self.perturbation_array[i]).tobytes()
-            )
+            hash_vector[i] = hash(rounded_and_perturbed[i].tobytes())
         return hash_vector
 
     def create_hash_vector_array(self) -> np.ndarray:
