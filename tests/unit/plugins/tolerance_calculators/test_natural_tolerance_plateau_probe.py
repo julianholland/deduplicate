@@ -3,12 +3,6 @@ import numpy as np
 from deduplicate.plugins.tolerance_calculators.natural_tolerance_plateau_probe import (
     NaturalTolerancePlateauProbe,
 )
-from deduplicate.plugins.duplicate_detection_algorithms.distance_matrix import (
-    DistanceMatrix,
-)
-from deduplicate.plugins.duplicate_detection_algorithms.multi_hashing import (
-    MultiHashing,
-)
 
 
 
