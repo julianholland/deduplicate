@@ -52,6 +52,7 @@ class ToleranceCalculator(ABC):
             return tolerance
         
         # temporarily set the dataset_array to the tolerance_dataset_array for the duration of the search
+        print(self.duplicate_detection_algorithm_object.distance_matrix.shape)
         with self.temp_attr(
             self.duplicate_detection_algorithm_object,
             "dataset_array",

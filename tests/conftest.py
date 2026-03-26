@@ -3,6 +3,8 @@ import pytest
 import numpy as np
 from deduplicate.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
 from deduplicate.core.tolerance_calculator import ToleranceCalculator
+from deduplicate.plugins.duplicate_detection_algorithms.distance_matrix import DistanceMatrix
+from deduplicate.plugins.duplicate_detection_algorithms.multi_hashing import MultiHashing
 
 # --- Dummy plugins for testing only ---
 
@@ -43,4 +45,22 @@ def dummy_tolerance_calculator():
         perturbations_per_vector=5,
         perturbation_scale=0.1,
         binary_search_steps=20,
+    )
+
+@pytest.fixture
+def distance_matrix_dda():
+    return DistanceMatrix(
+        tolerance=0.1,
+        input_vector=np.array([1.0, 2.0]),
+        dataset_array=np.array([[0.1, 0.2], [1.01, 2.01], [0.0, 20.0]]),
+    )
+
+
+@pytest.fixture
+def multi_hashing_dda():
+    return MultiHashing(
+        tolerance=0.01,
+        perturbations=5,
+        input_vector=np.array([1.0, 2.0]),
+        dataset_array=np.array([[0.1, 0.2], [0.5, 0.6], [1.8, 0.9]]),
     )

@@ -10,16 +10,14 @@ import warnings
 class NaturalTolerancePlateauProbe(ToleranceCalculator):
     def __init__(
         self,
-        dataset_array: np.ndarray,
         duplicate_detection_algorithm_object: DuplicateDetectionAlgorithm,
-        tolerance_dataset_array: np.ndarray,
+        tolerance_dataset_array: np.ndarray = np.array([]),
         perturbations_per_vector: int = 1,
         perturbation_scale: float = 0.1,
         binary_search_steps: int = 50,
         probe_steps: int = 100,
     ) -> None:
         super().__init__(
-            dataset_array=dataset_array,
             duplicate_detection_algorithm_object=duplicate_detection_algorithm_object,
             tolerance_dataset_array=tolerance_dataset_array,
             perturbations_per_vector=perturbations_per_vector,
@@ -27,6 +25,9 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
             binary_search_steps=binary_search_steps,
         )
         self.probe_steps = probe_steps
+
+    def __str__(self) -> str:
+        return f"NaturalTolerancePlateauProbe(perturbations_per_vector={self.perturbations_per_vector}, perturbation_scale={self.perturbation_scale}, dda={str(self.duplicate_detection_algorithm_object).split('(')[0]})"
 
     def tolerance_probe(
         self, lower_tolerance: float, upper_tolerance: float, tolerance_steps: float
@@ -58,7 +59,6 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
             ) / (sorted_tols[i + datapoints_to_calculate_gradient] - sorted_tols[i])
             if abs(gradient) < plateau_threshold:  # Threshold for plateau detection
                 plateau_log[i] = True
-
         # Record the start and end of each plateau and its length
         plateau_lengths = []
         for i in range(len(plateau_log)):
@@ -77,10 +77,10 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
     def calculate_tolerance(self) -> float:
         self._ensure_perturbed_dataset()
         all_same_tolerance = self.binary_search_tolerance(
-            target_structures=1, find_largest_tolerance_for_target=False
+            target_unique_vectors=1, find_largest_tolerance_for_target=False
         )
         all_different_tolerance = self.binary_search_tolerance(
-            target_structures=len(self.tolerance_dataset_array),
+            target_unique_vectors=len(self.tolerance_dataset_array),
             find_largest_tolerance_for_target=True,
         )
         probe_results = self.tolerance_probe(

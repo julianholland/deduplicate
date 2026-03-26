@@ -24,6 +24,7 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
         if self.distance_matrix.shape[0] != self.dataset_array.shape[0]:
             # warnings.warn(f"Distance matrix shape does not match dataset; recomputing.{self.dataset_array.shape[0]}, {self.distance_matrix.shape[0]}")
             # self.compute_distance_matrix(self.dataset_array)
+            print(self.dataset_array.shape, self.distance_matrix.shape)
             raise ValueError("Distance matrix shape does not match dataset; recomputing is currently disabled to avoid long computations during testing. Please compute the distance matrix manually and assign it to the duplicate detection algorithm object before duplication checks.")
 
     def duplicate_check(self) -> bool:
@@ -43,5 +44,7 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
                 unique_structures += 1
         return unique_structures
 
-    def pre_dda_processing(self) -> None:
-        self.compute_distance_matrix(self.dataset_array)
+    def pre_dda_processing(self, input_dataset_array: np.ndarray | None = None, *args, **kwargs) -> None:
+        if input_dataset_array is None:
+            input_dataset_array = self.dataset_array
+        self.compute_distance_matrix(input_dataset_array)

@@ -125,5 +125,5 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             >= self.acceptance_threshold
         )
 
-    def pre_dda_processing(self) -> None:
+    def pre_dda_processing(self, *args, **kwargs) -> None:
         self.set_perturbation_array()
