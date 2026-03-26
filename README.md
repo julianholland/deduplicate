@@ -4,6 +4,10 @@
 </div>
 
 ***
+
+[![codecov](https://codecov.io/gh/julianholland/deduplicate/graph/badge.svg?token=JL3OTRCXZD)](https://codecov.io/gh/julianholland/deduplicate)
+
+
 ## Key Features
 
 
