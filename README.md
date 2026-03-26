@@ -126,6 +126,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Add example.ipynb
 - [ ] Add benchmarks for time and robustness
 - [ ] Add Locality-Sensitive Hashing as an option
-- [ ] Speedup slow tasks with Numba
+- [x] Speedup slow tasks with Numba
 - [ ] Set up Read the Docs
 - [ ] Create general deduplicate function
