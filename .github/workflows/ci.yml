@@ -23,3 +23,14 @@ jobs:
 
       - name: Run tests
         run: pytest tests
+        
+      - name: Run tests with coverage
+        run: |
+          pip install pytest-cov
+          pytest --cov=src --cov-report=xml
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: julianholland/deduplicate
