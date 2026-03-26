@@ -1,10 +1,10 @@
 # tests/conftest.py
 import pytest
 import numpy as np
-from deduplicate.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
-from deduplicate.core.tolerance_calculator import ToleranceCalculator
-from deduplicate.plugins.duplicate_detection_algorithms.distance_matrix import DistanceMatrix
-from deduplicate.plugins.duplicate_detection_algorithms.multi_hashing import MultiHashing
+from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
+from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
+from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import DistanceMatrix
+from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import MultiHashing
 
 # --- Dummy plugins for testing only ---
 

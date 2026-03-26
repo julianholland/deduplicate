@@ -1,19 +1,43 @@
 <div align="center">
-  <h1><code>deduplicate</code></h1>
+  <h1><code>deduplicate_lib</code></h1>
   <p><i>deduplication algorithms in python</i></p>
 </div>
 
 ***
 ## Key Features
 
-- Factory Plugin architecture, for easy extensibility and modification
-- Suite of tolerance tuning algorithms to help you find the right tolerance value for your system (not yet implemented)
-- Suite of benchmarking tools to ensure rigor, accuracy, and speed (not yet implemented)
 
+- Easy to use deduplication algorithms for any vector array
+- Suite of tolerance tuning algorithms to help you find the right tolerance value for your system
+- Suite of benchmarking tools to ensure rigor, accuracy, and speed (not yet implemented)
+- Factory Plugin architecture, for easy extensibility and modification
 
 ***
 ## Implemented Algorithms
 
 - Distance Matrix (Simple, accurate, expensive): Computes the distance matrix for all vectors and determines duplicates by finding those that fall below a given distance
 - Multi Hashing (Fast): Smears and rounds the vectors using a normal distribution and computes the hashes for each which are then used to determine duplicates by proportion of hash clashes.
-- Locality Sensitive Hashing (Fast, Accurate)
+<!-- - Locality Sensitive Hashing (Fast, Accurate) -->
+
+## Quick Start
+install using pip
+```bash
+pip install deduplicate_lib
+```
+
+load your data into python 
+
+```python
+from deduplicate_lib.plugins.deduplication_algorithms.multi_hash import MultiHash
+
+# define your paramerters in the MultiHash object
+dda=MultiHash(
+      tolerance=0.01,
+      dataset_array: your_data_array,
+      perturbations: int = 200, 
+    )
+
+print(dda.get_dataset_unique_structures())
+```
+
+A more detailed example can be seen in the `examples` directory

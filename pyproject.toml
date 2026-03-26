@@ -1,5 +1,5 @@
 [project]
-name = "deduplicate"
+name = "deduplicate_lib"
 dynamic = ["version"]
 description = "A Python package for deduplicating data."
 authors = [
@@ -15,7 +15,7 @@ dependencies = [
 package-dir = {"" = "src"}
 
 [tool.setuptools.dynamic]
-version = {attr = "deduplicate.__version__"}
+version = {attr = "deduplicate_lib.__version__"}
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-mock", "coverage", "ruff"]

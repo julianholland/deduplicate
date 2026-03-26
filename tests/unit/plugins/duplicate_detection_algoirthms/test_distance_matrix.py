@@ -1,4 +1,4 @@
-from deduplicate.plugins.duplicate_detection_algorithms.distance_matrix import (
+from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import (
     DistanceMatrix,
 )
 import numpy as np

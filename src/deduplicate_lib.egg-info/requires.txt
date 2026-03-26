@@ -1,5 +1,7 @@
+numpy
 
 [dev]
 pytest
 pytest-mock
 coverage
+ruff

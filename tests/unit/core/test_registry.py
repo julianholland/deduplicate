@@ -1,7 +1,7 @@
 # tests/test_registry.py
 import pytest
-from deduplicate.core.plugin_registry import register_plugin, create_plugin, get_plugin_class
-from deduplicate.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
+from deduplicate_lib.core.plugin_registry import register_plugin, create_plugin, get_plugin_class
+from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
 
 def test_register_and_retrieve():
     @register_plugin("duplicate_detection_algorithm", "test_dummy")

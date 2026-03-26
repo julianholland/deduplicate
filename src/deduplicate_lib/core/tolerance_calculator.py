@@ -1,6 +1,6 @@
 import numpy as np
 from abc import ABC, abstractmethod
-from deduplicate.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
+from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
 from contextlib import contextmanager
 import warnings
 

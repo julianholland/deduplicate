@@ -1,0 +1,35 @@
+Metadata-Version: 2.4
+Name: deduplicate_lib
+Version: 0.1.0
+Summary: A Python package for deduplicating data.
+Author-email: Julian Holland <holland@fhi.mpg.de>
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: pytest-mock; extra == "dev"
+Requires-Dist: coverage; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Dynamic: license-file
+
+<div align="center">
+  <h1><code>deduplicate</code></h1>
+  <p><i>deduplication algorithms in python</i></p>
+</div>
+
+***
+## Key Features
+
+- Factory Plugin architecture, for easy extensibility and modification
+- Suite of tolerance tuning algorithms to help you find the right tolerance value for your system (not yet implemented)
+- Suite of benchmarking tools to ensure rigor, accuracy, and speed (not yet implemented)
+
+
+***
+## Implemented Algorithms
+
+- Distance Matrix (Simple, accurate, expensive): Computes the distance matrix for all vectors and determines duplicates by finding those that fall below a given distance
+- Multi Hashing (Fast): Smears and rounds the vectors using a normal distribution and computes the hashes for each which are then used to determine duplicates by proportion of hash clashes.
+- Locality Sensitive Hashing (Fast, Accurate)

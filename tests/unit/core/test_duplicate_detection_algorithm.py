@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from deduplicate.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
+from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
 
 
 def test_cannot_instantiate_abc():

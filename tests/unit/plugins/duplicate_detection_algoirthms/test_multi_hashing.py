@@ -1,4 +1,4 @@
-from deduplicate.plugins.duplicate_detection_algorithms.multi_hashing import (
+from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
     MultiHashing,
 )
 import numpy as np

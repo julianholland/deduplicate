@@ -1,5 +1,5 @@
-from deduplicate.core.tolerance_calculator import ToleranceCalculator
-from deduplicate.core.plugin_registry import register_plugin
+from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
+from deduplicate_lib.core.plugin_registry import register_plugin
 
 
 @register_plugin("tolerance_calculator", "perturbed_dataset_reclustering")

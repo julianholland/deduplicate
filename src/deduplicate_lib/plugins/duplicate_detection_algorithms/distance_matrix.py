@@ -1,5 +1,5 @@
-from deduplicate.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
-from deduplicate.core.plugin_registry import register_plugin
+from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
+from deduplicate_lib.core.plugin_registry import register_plugin
 import numpy as np
 
 

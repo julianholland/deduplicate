@@ -1,9 +1,9 @@
 import pytest
 import numpy as np
-from deduplicate.plugins.tolerance_calculators.natural_tolerance_plateau_probe import (
+from deduplicate_lib.plugins.tolerance_calculators.natural_tolerance_plateau_probe import (
     NaturalTolerancePlateauProbe,
 )
-from deduplicate.plugins.tolerance_calculators.perturbed_dataset_reclustering import (
+from deduplicate_lib.plugins.tolerance_calculators.perturbed_dataset_reclustering import (
     PerturbedDatasetReclustering,
 )
 

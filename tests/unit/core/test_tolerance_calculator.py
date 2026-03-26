@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from deduplicate.core.tolerance_calculator import ToleranceCalculator
+from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
 
 
 def test_cannot_instantiate_abc():
