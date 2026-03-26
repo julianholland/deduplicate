@@ -38,11 +38,11 @@ class ToleranceCalculator(ABC):
         Binary search to find the tolerance that yields the target number of unique structures.
         """
         best_min = 0.0
-        print(self.tolerance_dataset_array)
-        best_max = np.max(self.tolerance_dataset_array) - np.min(
-            self.tolerance_dataset_array
-        )
-        tolerance = best_max / 2
+        # to ensure that our original best max value is above the tolerance value that yields all structures as the same, we tie it to the relative standard deviation of the dataset array. A more diverse dataset will have a higher standard deviation and thus require a higher tolerance to yield all structures as the same, while a more homogenous dataset will have a lower standard deviation and thus require a lower tolerance to yield all structures as the same.
+        ptp=np.ptp(self.tolerance_dataset_array) 
+        abs_std=np.mean(np.std(self.tolerance_dataset_array, axis=0))
+        best_max = (ptp  + abs_std) * self.duplicate_detection_algorithm_object.dataset_array.shape[1]      
+        tolerance = best_max 
 
         exact_list = []
         all_diff_dict = {}
@@ -62,30 +62,28 @@ class ToleranceCalculator(ABC):
                 with self.temp_attr(
                     self.duplicate_detection_algorithm_object, "tolerance", tolerance
                 ):
+                    
                     unique_vectors = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-                    all_diff_dict[tolerance] = np.abs(
-                        unique_vectors - target_unique_vectors
-                    )
+                all_diff_dict[tolerance] = unique_vectors
+                if unique_vectors < target_unique_vectors: # loosen tolerance
+                    best_max = tolerance
+                elif unique_vectors > target_unique_vectors: # tighten tolerance
+                    best_min = tolerance
 
-                    if unique_vectors < target_unique_vectors:
-                        best_max = tolerance
-                    elif unique_vectors > target_unique_vectors:
+                else:
+                    exact_list.append(tolerance)
+                    if (
+                        target_unique_vectors
+                        == len(
+                            self.duplicate_detection_algorithm_object.dataset_array
+                        )
+                        or find_largest_tolerance_for_target
+                    ):
                         best_min = tolerance
                     else:
-                        exact_list.append(tolerance)
-                        if (
-                            target_unique_vectors
-                            == len(
-                                self.duplicate_detection_algorithm_object.dataset_array
-                            )
-                            or find_largest_tolerance_for_target
-                        ):
-                            best_min = tolerance
-                        else:
-                            best_max = tolerance
+                        best_max = tolerance
 
-                    tolerance = (best_min + best_max) / 2
-                    
+                tolerance = (best_min + best_max) / 2
         # Find the best exact value if it exists, otherwise find the closest value
         if len(exact_list) > 0:
             if find_largest_tolerance_for_target:
@@ -93,12 +91,14 @@ class ToleranceCalculator(ABC):
             else:
                 tolerance = min(exact_list)
         else:
+            
             tolerance = [
                 tol
                 for tol, diff in all_diff_dict.items()
                 if diff == min(all_diff_dict.values())
             ][0]
-
+            warnings.warn(f"No exact tolerance found for target of {target_unique_vectors} unique vectors during binary search.\n Returning closest tolerance found: {tolerance} with {all_diff_dict[tolerance]} unique vectors.")
+        print(all_diff_dict)
         return tolerance
 
     def create_perturbed_dataset(self, seed: int = 803):

@@ -117,10 +117,13 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         Returns:
             int: The number of unique structures in the dataset.
         """
+        self.create_hash_vector_array()
         clash_array = np.zeros((self.hash_vector_array.shape), dtype=bool)
         clash_array[np.nonzero(self.hash_vector_array)] = True
-        
         return np.sum(
             np.sum(clash_array, axis=1) / self.perturbations
             >= self.acceptance_threshold
         )
+
+    def pre_dda_processing(self) -> None:
+        self.set_perturbation_array()

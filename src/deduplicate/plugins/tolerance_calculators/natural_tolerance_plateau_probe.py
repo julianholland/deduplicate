@@ -1,4 +1,3 @@
-from ase import data
 
 from deduplicate.core.tolerance_calculator import ToleranceCalculator
 from deduplicate.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm

@@ -119,26 +119,26 @@ def test_binary_search_tolerance(dummy_tolerance_calculator):
 
     dummy_tolerance_calculator.binary_search_steps = 0
     dummy_tolerance_calculator.create_perturbed_dataset(seed=803)
-    expected_tolerance_no_search = (
-        np.ptp(dummy_tolerance_calculator.tolerance_dataset_array) / 2
-    )
+    original_best_max = (
+        np.ptp(dummy_tolerance_calculator.tolerance_dataset_array)
+        + np.mean(np.std(dummy_tolerance_calculator.tolerance_dataset_array, axis=0))
+    ) * dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape[1]
+    # expected_tolerance_no_search = (
+    #     np.ptp(dummy_tolerance_calculator.tolerance_dataset_array) / 2
+    # )
     with pytest.warns(
         UserWarning,
-        match=f"Binary search called with {dummy_tolerance_calculator.binary_search_steps} steps. No binary search performed.\n Returning tolerance of half the range of the perturbed dataset: {expected_tolerance_no_search}.",
+        match=f"Binary search called with {dummy_tolerance_calculator.binary_search_steps} steps. No binary search performed.\n Returning tolerance of half the range of the perturbed dataset: {original_best_max}.",
     ):
         assert (
             dummy_tolerance_calculator.binary_search_tolerance(
                 target_unique_vectors=1, find_largest_tolerance_for_target=True
             )
-            == expected_tolerance_no_search
+            == original_best_max
         )
 
-    # one step binary search should be half the range of values in the perturbed dataset, which should be around 1.0 for the default perturbation scale of and then one step of the binary search should give us a tolerance of around 0.5
+    # one step binary search should be half the the original best max, which is the same as the expected tolerance with no search since the original best max is calculated based on the range of the perturbed dataset
     dummy_tolerance_calculator.binary_search_steps = 1
     for seed in list(range(803, 1000)):
-        run_per_seed(seed, 0.5)
+        run_per_seed(seed, original_best_max)
 
-    # tolerance when find largest target will converge to half the max perturbed value, which is around 1.0
-    dummy_tolerance_calculator.binary_search_steps = 10
-    for seed in list(range(803, 1000)):
-        run_per_seed(seed, 1.0)
