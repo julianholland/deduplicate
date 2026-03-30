@@ -58,6 +58,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         )
 
     def _ensure_perturbation_array(self):
+        
         if self.perturbation_array.shape[0] != self.perturbations:
             warnings.warn(
                 "Perturbation array shape does not match expected number of perturbations; recomputing. \nAssign the perturbation array prior duplication checks to avoid this warning."

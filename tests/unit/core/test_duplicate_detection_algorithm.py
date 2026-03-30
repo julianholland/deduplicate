@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
-
+import re
 
 def test_cannot_instantiate_abc():
     with pytest.raises(TypeError):
@@ -77,3 +77,17 @@ def test_add_new_vector_to_distance_matrix(dummy_dda):
     dummy_dda.compute_distance_matrix(dummy_dda.dataset_array)
     dummy_dda.add_new_vector_to_distance_matrix(dummy_dda.dataset_array)
     assert dummy_dda.distance_matrix.shape == (2, 2)
+
+def test_pass_only_methods_do_not_raise(dummy_dda):
+    dummy_dda.pre_dda_processing()
+    dummy_dda.add_input_vector_to_dda()
+
+def test_get_unique_vector_indices(dummy_dda):
+    dummy_dda.compute_distance_matrix(dummy_dda.dataset_array)
+    with pytest.raises(ValueError, match=re.escape("Unique vector indices array shape does not match dataset; please run get_dataset_unique_structures() to update the unique vector indices before calling this method.")):
+        dummy_dda.get_unique_vector_indices()
+    unique_indices = np.array([True])  # since the dataset has only one vector, it is unique
+    dummy_dda.unique_vector_indices = unique_indices
+    assert unique_indices.shape == (1,)
+    assert unique_indices[0] is np.bool_(True)
+    
