@@ -7,14 +7,15 @@ import numpy as np
 class DistanceMatrix(DuplicateDetectionAlgorithm):
     def __init__(
         self,
-        tolerance: float,
-        input_vector: np.ndarray,
-        dataset_array: np.ndarray,
+        tolerance: float = 0.1,
+        input_vector: np.ndarray = np.array([]),
+        dataset_array: np.ndarray = np.array([]),
         distance_matrix: np.ndarray = np.array([]),
         distance_metric: str = "euclidean",
+        unique_vector_indices: np.ndarray = np.array([]),
     ) -> None:
         super().__init__(
-            tolerance, input_vector, dataset_array, distance_matrix, distance_metric
+            tolerance, input_vector, dataset_array, distance_matrix, distance_metric, unique_vector_indices
         )
 
     def __str__(self) -> str:
@@ -36,15 +37,21 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
 
     def get_dataset_unique_structures(self) -> int:
         self._ensure_distance_matrix()
-        unique_structures = 1
-        
+        self.unique_vector_indices = np.zeros(self.dataset_array.shape[0], dtype=bool)
+        self.unique_vector_indices[0] = True  # the first vector is always unique
         for i in range(1, self.distance_matrix.shape[0]):
             imask = np.arange(self.distance_matrix.shape[0]) != i
             if np.all(self.distance_matrix[i][imask] >= self.tolerance):
-                unique_structures += 1
-        return unique_structures
+                self.unique_vector_indices[i] = True
+        return np.sum(self.unique_vector_indices)
 
     def pre_dda_processing(self, input_dataset_array: np.ndarray | None = None, *args, **kwargs) -> None:
         if input_dataset_array is None:
             input_dataset_array = self.dataset_array
         self.compute_distance_matrix(input_dataset_array)
+    
+    def add_input_vector_to_dda(self) -> None:
+        """Add the input vector to the dataset array and update the distance matrix accordingly."""
+        self.add_new_vector_to_distance_matrix(self.dataset_array)
+        self.dataset_array = np.vstack((self.dataset_array, self.input_vector))
+

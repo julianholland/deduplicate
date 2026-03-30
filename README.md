@@ -55,6 +55,7 @@ A more detailed example can be seen in the `examples` directory
 
 - Python 3.9+
 - `numpy`
+- `numba`
 
 ## 🤝 Contributing
 
@@ -103,7 +104,7 @@ If you use deduplicate_lib in your research, please cite:
   author={Julian Holland},
   year={2026},
   url={https://github.com/julianholland/deduplicate},
-  version={0.1.0}
+  version={0.0.1dev}
 }
 ```
 
@@ -123,9 +124,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Project To-Do
 
-- [ ] Add example.ipynb
+- [x] Add example.ipynb
+- [ ] Create general Pre-allocation protocal
 - [ ] Add benchmarks for time and robustness
 - [ ] Add Locality-Sensitive Hashing as an option
 - [x] Speedup slow tasks with Numba
 - [ ] Set up Read the Docs
-- [ ] Create general deduplicate function
+- [x] Create general deduplicate function

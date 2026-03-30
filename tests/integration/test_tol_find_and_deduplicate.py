@@ -9,11 +9,18 @@ from deduplicate_lib.plugins.tolerance_calculators.perturbed_dataset_reclusterin
 
 rng=np.random.default_rng(803)
 max_data_distance = 1.0
-min_data_distance = 0.2
 dimensions = 256
 original_data_point = np.ones(dimensions) * max_data_distance/2
-data = rng.uniform(
-    low=min_data_distance, high=max_data_distance, size=(30, dimensions))
+big_random_data = rng.uniform(
+    low=0.0, high=max_data_distance, size=(30, dimensions))
+
+small_random_data = rng.uniform(
+    low=0.0, high=max_data_distance/100, size=(30, dimensions))
+
+random_point=rng.integers(low=0, high=30)
+perturbed_data = np.array([big_random_data[random_point] + small_random_data[x] for x in range(30)])
+
+data = np.vstack([original_data_point, perturbed_data])
 
 
 @pytest.mark.parametrize(
@@ -39,12 +46,16 @@ def test_pdr_with_dda(request, dda_fixture):
     assert tolerance > 0.0
     assert np.isclose(tolerance, dda_fixture[1], atol=0.05 * dda_fixture[1])
 
+
 @pytest.mark.parametrize(
-    "dda_fixture",
-    [["distance_matrix_dda", 0.17624324801178806], ["multi_hashing_dda", 0.784201633170273]]
+    "dda_fixture,tolerance_result_fixture",
+    [
+        ("distance_matrix_dda", 0.14141755074312934),
+        ("multi_hashing_dda", 0.8546626493602801),
+    ]
 )
-def test_ntpp_with_dda(request, dda_fixture):
-    dda = request.getfixturevalue(dda_fixture[0])
+def test_ntpp_with_dda(request, dda_fixture, tolerance_result_fixture):
+    dda = request.getfixturevalue(dda_fixture)
     dda.dataset_array = data
 
     tc = NaturalTolerancePlateauProbe(
@@ -62,4 +73,5 @@ def test_ntpp_with_dda(request, dda_fixture):
     # assert False
     assert isinstance(tolerance, float)
     assert tolerance > 0.0
-    assert np.isclose(tolerance, dda_fixture[1], atol=0.05 * dda_fixture[1])
+
+    assert np.isclose(tolerance, tolerance_result_fixture, atol=0.05 * tolerance_result_fixture)

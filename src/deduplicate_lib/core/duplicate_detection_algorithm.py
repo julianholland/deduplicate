@@ -60,12 +60,14 @@ class DuplicateDetectionAlgorithm(ABC):
         dataset_array: np.ndarray = np.array([]),
         distance_matrix: np.ndarray = np.array([]),
         distance_metric: str = "euclidean",
+        unique_vector_indices: np.array = np.array([]),
     ) -> None:
         self.tolerance = tolerance
         self.input_vector = input_vector
         self.dataset_array = dataset_array
         self.distance_matrix = distance_matrix
         self.distance_metric = distance_metric
+        self.unique_vector_indices = unique_vector_indices
 
     # In DuplicateDetectionAlgorithm
 
@@ -107,6 +109,22 @@ class DuplicateDetectionAlgorithm(ABC):
         new_row = np.append(new_distances, 0)  # Distance to itself is 0
         self.distance_matrix = np.vstack((self.distance_matrix, new_row))
 
+    def pre_dda_processing(self, input_dataset_array: np.ndarray | None = None, *args, **kwargs) -> None:
+        """A method that can be overridden by child classes to perform any necessary processing before duplication checks. For example, this could be used to compute the distance matrix for the dataset before any duplication checks are performed, which would save time if multiple duplication checks are being performed on the same dataset with different input vectors."""
+        pass
+
+    def add_input_vector_to_dda(self) -> None:
+        """Add the input vector to the dataset array and update the distance matrix accordingly."""
+        pass
+    
+    def get_unique_vector_indices(self) -> np.ndarray:
+        """Returns the indices of the unique vectors in the dataset."""
+        return np.where(self.unique_vector_indices)[0]
+
+    def deduplicate(self):
+        """Finds all unique vectors in the dataset and returns them as a new array."""
+        return self.dataset_array[self.get_unique_vector_indices()]
+    
     @abstractmethod
     def duplicate_check(self) -> bool:
         pass
@@ -114,3 +132,5 @@ class DuplicateDetectionAlgorithm(ABC):
     @abstractmethod
     def get_dataset_unique_structures(self) -> int:
         pass
+
+    

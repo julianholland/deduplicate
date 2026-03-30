@@ -52,5 +52,5 @@ def test_get_dataset_unique_structures():
         distance_metric="euclidean",
     )
     unique_count = dda.get_dataset_unique_structures()
-    print(dda.distance_matrix)
+    print(dda.distance_matrix > 0.1)
     assert unique_count == 2

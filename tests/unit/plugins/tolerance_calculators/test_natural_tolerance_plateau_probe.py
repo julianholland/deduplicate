@@ -5,9 +5,6 @@ from deduplicate_lib.plugins.tolerance_calculators.natural_tolerance_plateau_pro
 )
 
 
-
-
-
 def test_str_representation(distance_matrix_dda):
     assert (
         str(
@@ -39,7 +36,8 @@ def test_tolerance_probe(distance_matrix_dda):
     assert len(tolerance_results) == 10
     for tol, unique_structures in tolerance_results.items():
         assert isinstance(tol, float)
-        assert isinstance(unique_structures, int)
+        print(type(unique_structures))
+        assert isinstance(unique_structures, int | np.integer)
         assert unique_structures > 0
 
 
@@ -57,32 +55,37 @@ def test_find_plateaus(distance_matrix_dda):
         + [3] * (number_of_datapoints // 3)
         + [4] * (number_of_datapoints - 2 * (number_of_datapoints // 3))
     )
-    three_plateau_results = {tol: unique_vectors for tol, unique_vectors in zip(tol_values, three_plateau_unique_vectors)}
+    three_plateau_results = {
+        tol: unique_vectors
+        for tol, unique_vectors in zip(tol_values, three_plateau_unique_vectors)
+    }
     no_plateau_results = {tol: i for i, tol in enumerate(tol_values)}
 
-    plateaus = tc.find_plateaus(three_plateau_results, datapoints_to_calculate_gradient=2, plateau_threshold=0.1)
+    plateaus = tc.find_plateaus(
+        three_plateau_results, datapoints_to_calculate_gradient=2, plateau_threshold=0.1
+    )
     assert len(plateaus) == 3
-    
+
     for start_tol, end_tol, length in plateaus:
         print(f"Plateau from {start_tol} to {end_tol} with length {length}")
         assert end_tol > start_tol
         assert length >= 2
-    
-    no_plateaus = tc.find_plateaus(no_plateau_results, datapoints_to_calculate_gradient=2, plateau_threshold=0.1)
+
+    no_plateaus = tc.find_plateaus(
+        no_plateau_results, datapoints_to_calculate_gradient=2, plateau_threshold=0.1
+    )
     assert len(no_plateaus) == 0
 
 
-@pytest.mark.parametrize(
-    "dda_fixture",
-    ["distance_matrix_dda", "multi_hashing_dda"]
-)
+@pytest.mark.parametrize("dda_fixture", ["distance_matrix_dda", "multi_hashing_dda"])
 def test_calculate_tolerance(request, dda_fixture):
     dda = request.getfixturevalue(dda_fixture)
 
     tc = NaturalTolerancePlateauProbe(
         duplicate_detection_algorithm_object=dda,
-        perturbations_per_vector=100,
-        perturbation_scale=0.01,
+        perturbations_per_vector=300,
+        perturbation_scale=0.001,
+        probe_steps=200,
     )
 
     # generate rattled data and compute distance matrix
@@ -92,12 +95,15 @@ def test_calculate_tolerance(request, dda_fixture):
         "dataset_array",
         tc.tolerance_dataset_array,
     ):
-        tc.duplicate_detection_algorithm_object.pre_dda_processing(tc.tolerance_dataset_array)
+        tc.duplicate_detection_algorithm_object.pre_dda_processing(
+            tc.tolerance_dataset_array
+        )
 
+    # tc.tolerance_probe()
     # use these to calculate the tolerance
+    # tc.binary_search_steps=
     tolerance = tc.calculate_tolerance()
 
-    
     assert isinstance(tolerance, float)
     assert tolerance > 0.0
     tc.duplicate_detection_algorithm_object.tolerance = tolerance
@@ -113,6 +119,8 @@ def test_calculate_tolerance(request, dda_fixture):
     tc.probe_steps = 1
     with pytest.warns(
         UserWarning,
-        match="No plateaus found in tolerance probe. Consider adding in perturbed structures and/or increasing dataset size.\nReturning average of all same and all different tolerance as fallback."
+        match="No plateaus found in tolerance probe. Consider adding in perturbed structures and/or increasing dataset size and/or increaseing probe steps.\nReturning average of all same and all different tolerance as fallback.",
     ):
         tolerance = tc.calculate_tolerance()
+
+    # assert False

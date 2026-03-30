@@ -42,17 +42,15 @@ class ToleranceCalculator(ABC):
         ptp=np.ptp(self.tolerance_dataset_array) 
         abs_std=np.mean(np.std(self.tolerance_dataset_array, axis=0))
         best_max = (ptp  + abs_std) * self.duplicate_detection_algorithm_object.dataset_array.shape[1]      
-        tolerance = best_max 
+        tolerance = best_max
 
         exact_list = []
-        all_diff_dict = {}
-
+        results_dict = {}
         if self.binary_search_steps <= 0:
             warnings.warn(f"Binary search called with {self.binary_search_steps} steps. No binary search performed.\n Returning tolerance of half the range of the perturbed dataset: {tolerance}.")
             return tolerance
         
         # temporarily set the dataset_array to the tolerance_dataset_array for the duration of the search
-        print(self.duplicate_detection_algorithm_object.distance_matrix.shape)
         with self.temp_attr(
             self.duplicate_detection_algorithm_object,
             "dataset_array",
@@ -65,7 +63,7 @@ class ToleranceCalculator(ABC):
                 ):
                     
                     unique_vectors = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-                all_diff_dict[tolerance] = unique_vectors
+                results_dict[tolerance] = unique_vectors
                 if unique_vectors < target_unique_vectors: # loosen tolerance
                     best_max = tolerance
                 elif unique_vectors > target_unique_vectors: # tighten tolerance
@@ -92,14 +90,14 @@ class ToleranceCalculator(ABC):
             else:
                 tolerance = min(exact_list)
         else:
-            
+            closest_tol = min(results_dict.keys(), key=lambda tol: abs(results_dict[tol] - target_unique_vectors))
+            min_diff = results_dict[closest_tol] - target_unique_vectors
             tolerance = [
                 tol
-                for tol, diff in all_diff_dict.items()
-                if diff == min(all_diff_dict.values())
+                for tol, unique_vectors in results_dict.items()
+                if unique_vectors == target_unique_vectors + min_diff
             ][0]
-            warnings.warn(f"No exact tolerance found for target of {target_unique_vectors} unique vectors during binary search.\n Returning closest tolerance found: {tolerance} with {all_diff_dict[tolerance]} unique vectors.")
-        print(all_diff_dict)
+            warnings.warn(f"No exact tolerance found for target of {target_unique_vectors} unique vectors during binary search.\n Returning closest tolerance found: {tolerance} with {results_dict[tolerance]} unique vectors.")
         return tolerance
 
     def create_perturbed_dataset(self, seed: int = 803):
@@ -132,7 +130,7 @@ class ToleranceCalculator(ABC):
         if (
             self.tolerance_dataset_array.shape[0]
             != len(self.duplicate_detection_algorithm_object.dataset_array)
-            * self.perturbations_per_vector
+            * self.perturbations_per_vector and self.perturbations_per_vector > 1
         ):
             warnings.warn(
                 "Perturbed dataset is not properly initialized. Recreating it.\nEnsure a perturbed dataset is set prior finding tolerance."
