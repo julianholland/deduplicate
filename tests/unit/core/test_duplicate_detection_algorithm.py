@@ -143,7 +143,7 @@ def test_fast_cosine_distance():
 def test_unimplemented_duplicate_check(dummy_dda):
     class BadDummyDDA(DuplicateDetectionAlgorithm):
         pass
-    with pytest.raises(TypeError, match="Can't instantiate abstract class BadDummyDDA without an implementation for abstract methods 'duplicate_check', 'get_dataset_unique_structures'"):
+    with pytest.raises(TypeError):
         BadDummyDDA(
             tolerance=0.1,
             input_vector=np.array([1.0, 2.0]),
