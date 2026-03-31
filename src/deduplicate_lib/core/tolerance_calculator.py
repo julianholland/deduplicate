@@ -139,4 +139,4 @@ class ToleranceCalculator(ABC):
 
     @abstractmethod
     def calculate_tolerance(self) -> float:
-        pass
+        pass # pragma: no cover, implemented in child classes

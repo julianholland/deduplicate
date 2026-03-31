@@ -1,7 +1,7 @@
 from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
 from deduplicate_lib.core.plugin_registry import register_plugin
 import numpy as np
-
+import warnings
 
 @register_plugin(kind="duplicate_detection_algorithm", name="distance_matrix")
 class DistanceMatrix(DuplicateDetectionAlgorithm):
@@ -23,10 +23,9 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
 
     def _ensure_distance_matrix(self):
         if self.distance_matrix.shape[0] != self.dataset_array.shape[0]:
-            # warnings.warn(f"Distance matrix shape does not match dataset; recomputing.{self.dataset_array.shape[0]}, {self.distance_matrix.shape[0]}")
-            # self.compute_distance_matrix(self.dataset_array)
-            print(self.dataset_array.shape, self.distance_matrix.shape)
-            raise ValueError("Distance matrix shape does not match dataset; recomputing is currently disabled to avoid long computations during testing. Please compute the distance matrix manually and assign it to the duplicate detection algorithm object before duplication checks.")
+            warnings.warn("Distance matrix shape does not match dataset; recomputing.")
+            self.compute_distance_matrix(self.dataset_array)
+            
 
     def duplicate_check(self) -> bool:
         return bool(

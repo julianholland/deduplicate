@@ -54,3 +54,29 @@ def test_get_dataset_unique_structures():
     unique_count = dda.get_dataset_unique_structures()
     print(dda.distance_matrix > 0.1)
     assert unique_count == 2
+
+def test_ensure_distance_matrix(distance_matrix_dda):
+    dda = distance_matrix_dda
+    dda.compute_distance_matrix(dda.dataset_array)
+    assert dda._ensure_distance_matrix() is None  # should not raise a warning since the shape matches
+
+    dda.distance_matrix = np.array([1.0])  # incorrect shape
+    with pytest.warns(UserWarning, match="Distance matrix shape does not match dataset; recomputing."):
+        dda._ensure_distance_matrix()
+    
+    assert dda.distance_matrix.shape[0] == dda.dataset_array.shape[0]  # should have recomputed the distance matrix to match the dataset shape
+
+def test_pre_dda_processing(distance_matrix_dda):
+    dda = distance_matrix_dda
+    dda.pre_dda_processing()
+    assert dda.distance_matrix.shape[0] == dda.dataset_array.shape[0]  # should have computed the distance matrix to match the dataset shape
+
+def test_add_input_vector_to_dda(distance_matrix_dda):
+    dda = distance_matrix_dda
+    dda.compute_distance_matrix(dda.dataset_array)
+    initial_dataset_size = dda.dataset_array.shape[0]
+    initial_distance_matrix_size = dda.distance_matrix.shape[0]
+    dda.add_input_vector_to_dda()
+    assert dda.dataset_array.shape[0] == initial_dataset_size + 1
+    assert np.array_equal(dda.dataset_array[-1], dda.input_vector)
+    assert dda.distance_matrix.shape[0] == initial_distance_matrix_size + 1

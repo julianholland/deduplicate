@@ -5,14 +5,14 @@ from numba import njit
 
 @njit
 def fast_compute_distance_matrix(vector_array, distance_func):
-    num_samples = vector_array.shape[0]
-    distance_matrix = np.zeros((num_samples, num_samples))
-    for i in range(num_samples):
-        for j in range(i + 1, num_samples):
-            distance = distance_func(vector_array[i], vector_array[j])
-            distance_matrix[i, j] = distance
-            distance_matrix[j, i] = distance
-    return distance_matrix
+    num_samples = vector_array.shape[0] # pragma: no cover, tested but does not appear in coverage report due to numba jit compilation
+    distance_matrix = np.zeros((num_samples, num_samples)) # pragma: no cover
+    for i in range(num_samples): # pragma: no cover
+        for j in range(i + 1, num_samples): # pragma: no cover
+            distance = distance_func(vector_array[i], vector_array[j]) # pragma: no cover
+            distance_matrix[i, j] = distance # pragma: no cover
+            distance_matrix[j, i] = distance # pragma: no cover
+    return distance_matrix # pragma: no cover
 
 
 @njit
@@ -24,32 +24,32 @@ def fast_get_new_distance_matrix_column(
     Returns:
         np.ndarray: A 1D array containing the distances from the input vector to each vector in the dataset.
     """
-    num_samples = vector_array.shape[0]
-    new_distances = np.zeros(num_samples)
-    for i in range(num_samples):
-        new_distances[i] = distance_func(input_vector, vector_array[i])
-    return new_distances
+    num_samples = vector_array.shape[0] # pragma: no cover
+    new_distances = np.zeros(num_samples) # pragma: no cover
+    for i in range(num_samples): # pragma: no cover
+        new_distances[i] = distance_func(input_vector, vector_array[i]) # pragma: no cover
+    return new_distances # pragma: no cover
 
 
 # must be jit compatible functions, so defined outside of the class and not as static methods
 @njit
 def euclidean_distance(v1, v2):
-    return float(np.linalg.norm(v1 - v2))
+    return float(np.linalg.norm(v1 - v2)) # pragma: no cover
 
 
 @njit
 def manhattan_distance(v1, v2):
-    return np.sum(np.abs(v1 - v2))
+    return np.sum(np.abs(v1 - v2)) # pragma: no cover
 
 
 @njit
 def cosine_distance(v1, v2):
-    return 1 - np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
+    return 1 - np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))  # pragma: no cover
 
 
 @njit
 def hamming_distance(v1, v2):
-    return np.sum(v1 != v2)
+    return np.sum(v1 != v2) # pragma: no cover
 
 
 DISTANCE_FUNCTIONS = {
@@ -70,7 +70,7 @@ class DuplicateDetectionAlgorithm(ABC):
         dataset_array: np.ndarray = np.array([]),
         distance_matrix: np.ndarray = np.array([]),
         distance_metric: str = "euclidean",
-        unique_vector_indices: np.array = np.array([]),
+        unique_vector_indices: np.ndarray = np.array([]),
     ) -> None:
         self.tolerance = tolerance
         self.input_vector = input_vector
@@ -147,8 +147,8 @@ class DuplicateDetectionAlgorithm(ABC):
 
     @abstractmethod
     def duplicate_check(self) -> bool:
-        pass
+        pass # pragma: no cover
 
     @abstractmethod
     def get_dataset_unique_structures(self) -> int:
-        pass
+        pass # pragma: no cover

@@ -1,9 +1,24 @@
 from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
     MultiHashing,
 )
+from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import fast_round_and_perturb
 import numpy as np
 import pytest
 import copy
+
+def test_fast_round_and_perturb_numba():
+    input_vector = np.array([1.01, 2.01])
+    perturbation_array = np.array([0.1, 0.2, 0.3])
+    tolerance = 0.1
+
+    result = fast_round_and_perturb(input_vector, perturbation_array, tolerance)
+    expected_rounded_vector = np.round(input_vector / tolerance) * tolerance
+    expected_result = np.zeros((perturbation_array.shape[0], len(input_vector)))
+    for i in range(perturbation_array.shape[0]):
+        expected_result[i] = expected_rounded_vector * perturbation_array[i]
+
+    assert np.allclose(result, expected_result)
+
 
 def test_str_representation():
     dm = MultiHashing(

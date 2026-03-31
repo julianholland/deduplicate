@@ -40,13 +40,10 @@ load your data into python
 from deduplicate_lib.plugins.deduplication_algorithms.multi_hash import MultiHash
 
 # define your paramerters in the MultiHash object
-dda=MultiHash(
-      tolerance=0.01,
-      dataset_array: your_data_array,
-      perturbations: int = 200, 
-    )
+dda=MultiHash(dataset_array=your_data_array)
 
-print(dda.get_dataset_unique_structures())
+# return a list of all unique values
+print(dda.deduplicate())
 ```
 
 A more detailed example can be seen in the `examples` directory
@@ -56,6 +53,7 @@ A more detailed example can be seen in the `examples` directory
 - Python 3.9+
 - `numpy`
 - `numba`
+- `scipy`
 
 ## 🤝 Contributing
 

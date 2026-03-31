@@ -1,4 +1,6 @@
 numpy
+numba
+scipy
 
 [dev]
 pytest

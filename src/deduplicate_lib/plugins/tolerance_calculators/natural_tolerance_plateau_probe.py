@@ -5,8 +5,6 @@ from deduplicate_lib.core.duplicate_detection_algorithm import (
 from deduplicate_lib.core.plugin_registry import register_plugin
 import numpy as np
 import warnings
-
-
 @register_plugin("tolerance_calculator", "natural_tolerance_plateau_probe")
 class NaturalTolerancePlateauProbe(ToleranceCalculator):
     def __init__(
@@ -33,7 +31,7 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
         return f"NaturalTolerancePlateauProbe(perturbations_per_vector={self.perturbations_per_vector}, perturbation_scale={self.perturbation_scale}, dda={str(self.duplicate_detection_algorithm_object).split('(')[0]})"
 
     def tolerance_probe(
-        self, lower_tolerance: float, upper_tolerance: float, tolerance_steps: float
+        self, lower_tolerance: float, upper_tolerance: float, tolerance_steps: int
     ) -> dict:
         tolerance_results = {}
         with self.temp_attr(
@@ -52,29 +50,61 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
 
     def get_plateau_log(
         self,
+        sorted_tols: list,
         tolerance_results: dict,
         datapoints_to_calculate_gradient: int = 3,
         plateau_threshold: float = 1e-3,
-        sorted_tols: list | None = None,
+        # plot_plateaus: bool = False,
     ) -> np.ndarray:
-        if sorted_tols is None:
-            sorted_tols = sorted(tolerance_results.keys())
+        
+        if datapoints_to_calculate_gradient <= 1:
+            raise ValueError("datapoints_to_calculate_gradient must be greater than 1.")
+        
+        if len(sorted_tols) < datapoints_to_calculate_gradient:
+            raise ValueError("Not enough tolerance steps to calculate gradient with the given datapoints_to_calculate_gradient.")
 
         unique_counts = [tolerance_results[tol] for tol in sorted_tols]
-
-        relative_plateau_threshold = plateau_threshold * max(
-            unique_counts
-        )  # Scale threshold based on the maximum number of unique structures
+        total_gradient = (unique_counts[-1] - unique_counts[0]) / (sorted_tols[-1] - sorted_tols[0])
+        relative_plateau_threshold = plateau_threshold * total_gradient
+        
         # detect plateaus by calculating the gradient of unique_counts with respect to tolerance and finding where it is close to zero
-        plateau_log = np.zeros(len(sorted_tols), dtype=bool)
+        plateau_log = np.zeros(len(sorted_tols) - datapoints_to_calculate_gradient, dtype=bool)
+        gradient_log = np.zeros(len(sorted_tols) - datapoints_to_calculate_gradient)
         for i in range(len(unique_counts) - datapoints_to_calculate_gradient):
             gradient = (
                 unique_counts[i + datapoints_to_calculate_gradient] - unique_counts[i]
             ) / (sorted_tols[i + datapoints_to_calculate_gradient] - sorted_tols[i])
+            gradient_log[i] = gradient
             if (
-                abs(gradient) < relative_plateau_threshold
+                abs(gradient) < abs(relative_plateau_threshold)
             ):  # Threshold for plateau detection
                 plateau_log[i] = True
+
+        print(unique_counts[-1], unique_counts[0], sorted_tols[-1], sorted_tols[0], total_gradient)  # Debugging statement to check values used in total gradient calculation
+        print(relative_plateau_threshold)
+        
+        
+        # if plot_plateaus:
+        #     plt.clf()
+        #     x_vals = sorted_tols[:-datapoints_to_calculate_gradient]
+        #     y_vals = unique_counts[:-datapoints_to_calculate_gradient]
+        #     fig, ax = plt.subplots()
+        #     # Plot line for context
+        #     ax.plot(x_vals, y_vals, color='gray', alpha=0.5, label="Unique structures")
+        #     # Scatter plot colored by gradient
+        #     sc = ax.scatter(x_vals, y_vals, c=gradient_log, cmap='coolwarm', label="Gradient")
+        #     ax.set_xlabel("Tolerance")
+        #     ax.set_ylabel("unique structures")
+        #     ax.set_title("Plateau Detection")
+        #     fig.colorbar(sc, ax=ax, label='Gradient')
+        #     ax.legend()
+        #     fig.savefig(f'plateau_detection_{str(self.duplicate_detection_algorithm_object).split("(")[0]}.png')
+
+        # Plot line for context
+
+
+   
+        print(gradient_log, plateau_log)  # Debugging statement to check gradient values
         return plateau_log
 
     def find_plateaus(
@@ -85,10 +115,10 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
     ) -> tuple:
         sorted_tols = sorted(tolerance_results.keys())
         plateau_log = self.get_plateau_log(
+            sorted_tols,
             tolerance_results,
             datapoints_to_calculate_gradient,
             plateau_threshold,
-            sorted_tols,
         )
 
         plateau_lengths = []
@@ -109,7 +139,7 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
         self._ensure_perturbed_dataset()
         all_same_tolerance = self.binary_search_tolerance(
             target_unique_vectors=int(
-                np.floor(self.probe_buffer_fraction * len(self.tolerance_dataset_array))
+                np.max([1, np.floor(self.probe_buffer_fraction * len(self.tolerance_dataset_array))])
             ),
             find_largest_tolerance_for_target=False,
         )
