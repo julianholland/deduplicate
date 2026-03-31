@@ -98,11 +98,11 @@ If you use deduplicate_lib in your research, please cite:
 
 ```bibtex
 @software{alomancy2025,
-  title={Deduplicate_lib: Auto Tolerance Finding Deduplication Algorithms in Python},
+  title={deduplicate_lib: Auto Tolerance Finding Deduplication Algorithms in Python},
   author={Julian Holland},
   year={2026},
   url={https://github.com/julianholland/deduplicate},
-  version={0.0.1dev}
+  version={0.0.2dev}
 }
 ```
 
