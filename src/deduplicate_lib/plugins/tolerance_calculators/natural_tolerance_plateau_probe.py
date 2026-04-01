@@ -80,9 +80,6 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
             ):  # Threshold for plateau detection
                 plateau_log[i] = True
 
-        print(unique_counts[-1], unique_counts[0], sorted_tols[-1], sorted_tols[0], total_gradient)  # Debugging statement to check values used in total gradient calculation
-        print(relative_plateau_threshold)
-        
         
         # if plot_plateaus:
         #     plt.clf()
@@ -102,9 +99,6 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
 
         # Plot line for context
 
-
-   
-        print(gradient_log, plateau_log)  # Debugging statement to check gradient values
         return plateau_log
 
     def find_plateaus(
