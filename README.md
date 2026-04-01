@@ -97,7 +97,7 @@ pytest --cov
 If you use deduplicate_lib in your research, please cite:
 
 ```bibtex
-@software{alomancy2025,
+@software{deduplicate2026,
   title={deduplicate_lib: Auto Tolerance Finding Deduplication Algorithms in Python},
   author={Julian Holland},
   year={2026},
