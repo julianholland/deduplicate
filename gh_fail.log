@@ -1,119 +1,122 @@
-lint-and-test	Run tests	﻿2026-04-01T13:44:18.7073132Z ##[group]Run pytest tests
-lint-and-test	Run tests	2026-04-01T13:44:18.7073402Z [36;1mpytest tests[0m
-lint-and-test	Run tests	2026-04-01T13:44:18.7098644Z shell: /usr/bin/bash -e {0}
-lint-and-test	Run tests	2026-04-01T13:44:18.7098868Z env:
-lint-and-test	Run tests	2026-04-01T13:44:18.7099112Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.15/x64
-lint-and-test	Run tests	2026-04-01T13:44:18.7099521Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib/pkgconfig
-lint-and-test	Run tests	2026-04-01T13:44:18.7099934Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
-lint-and-test	Run tests	2026-04-01T13:44:18.7100331Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
-lint-and-test	Run tests	2026-04-01T13:44:18.7100710Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
-lint-and-test	Run tests	2026-04-01T13:44:18.7101072Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib
-lint-and-test	Run tests	2026-04-01T13:44:18.7101375Z ##[endgroup]
-lint-and-test	Run tests	2026-04-01T13:44:20.0027362Z ============================= test session starts ==============================
-lint-and-test	Run tests	2026-04-01T13:44:20.0028197Z platform linux -- Python 3.11.15, pytest-9.0.2, pluggy-1.6.0
-lint-and-test	Run tests	2026-04-01T13:44:20.0028935Z rootdir: /home/runner/work/deduplicate/deduplicate
-lint-and-test	Run tests	2026-04-01T13:44:20.0029564Z configfile: pyproject.toml
-lint-and-test	Run tests	2026-04-01T13:44:20.0029969Z plugins: mock-3.15.1
-lint-and-test	Run tests	2026-04-01T13:44:20.0030299Z collected 68 items
-lint-and-test	Run tests	2026-04-01T13:44:20.0030516Z 
-lint-and-test	Run tests	2026-04-01T13:44:23.9328313Z tests/integration/test_example_notebook.py F.                            [  2%]
-lint-and-test	Run tests	2026-04-01T13:44:26.6301170Z tests/integration/test_tol_find_and_deduplicate.py ....                  [  8%]
-lint-and-test	Run tests	2026-04-01T13:44:27.5240273Z tests/unit/core/test_duplicate_detection_algorithm.py .................. [ 35%]
-lint-and-test	Run tests	2026-04-01T13:44:27.5244102Z                                                                          [ 35%]
-lint-and-test	Run tests	2026-04-01T13:44:27.5269009Z tests/unit/core/test_registry.py ....                                    [ 41%]
-lint-and-test	Run tests	2026-04-01T13:44:31.1176594Z tests/unit/core/test_tolerance_calculator.py ......                      [ 50%]
-lint-and-test	Run tests	2026-04-01T13:44:31.1183026Z tests/unit/plugins/duplicate_detection_algoirthms/test_distance_matrix.py . [ 51%]
-lint-and-test	Run tests	2026-04-01T13:44:31.2881738Z ......                                                                   [ 60%]
-lint-and-test	Run tests	2026-04-01T13:44:31.2886459Z tests/unit/plugins/duplicate_detection_algoirthms/test_multi_hashing.py . [ 61%]
-lint-and-test	Run tests	2026-04-01T13:44:31.6784757Z ................                                                         [ 85%]
-lint-and-test	Run tests	2026-04-01T13:44:31.6790886Z tests/unit/plugins/tolerance_calculators/test_natural_tolerance_plateau_probe.py . [ 86%]
-lint-and-test	Run tests	2026-04-01T13:44:34.1334620Z ......                                                                   [ 95%]
-lint-and-test	Run tests	2026-04-01T13:44:34.1339638Z tests/unit/plugins/tolerance_calculators/test_perturbed_dataset_reclustering.py . [ 97%]
-lint-and-test	Run tests	2026-04-01T13:44:34.6611925Z ..                                                                       [100%]
-lint-and-test	Run tests	2026-04-01T13:44:34.6612690Z 
-lint-and-test	Run tests	2026-04-01T13:44:34.6612966Z =================================== FAILURES ===================================
-lint-and-test	Run tests	2026-04-01T13:44:34.6613804Z ___________________ test_multi_hashing_example_notebook_runs ___________________
-lint-and-test	Run tests	2026-04-01T13:44:34.6614405Z 
-lint-and-test	Run tests	2026-04-01T13:44:34.6614676Z     def test_multi_hashing_example_notebook_runs():
-lint-and-test	Run tests	2026-04-01T13:44:34.6615322Z         with open("examples/multi_hashing_demo.ipynb") as f:
-lint-and-test	Run tests	2026-04-01T13:44:34.6615923Z             nb = nbformat.read(f, as_version=4)
-lint-and-test	Run tests	2026-04-01T13:44:34.6616636Z         client = NotebookClient(nb, timeout=600, kernel_name="python3")
-lint-and-test	Run tests	2026-04-01T13:44:34.6617260Z >       client.execute()
-lint-and-test	Run tests	2026-04-01T13:44:34.6617515Z 
-lint-and-test	Run tests	2026-04-01T13:44:34.6617734Z tests/integration/test_example_notebook.py:12: 
-lint-and-test	Run tests	2026-04-01T13:44:34.6618411Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-lint-and-test	Run tests	2026-04-01T13:44:34.6619785Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_core/utils/__init__.py:165: in wrapped
-lint-and-test	Run tests	2026-04-01T13:44:34.6620761Z     return loop.run_until_complete(inner)
-lint-and-test	Run tests	2026-04-01T13:44:34.6621172Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6621872Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
-lint-and-test	Run tests	2026-04-01T13:44:34.6623378Z     return future.result()
-lint-and-test	Run tests	2026-04-01T13:44:34.6623695Z            ^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6624382Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbclient/client.py:693: in async_execute
-lint-and-test	Run tests	2026-04-01T13:44:34.6625222Z     async with self.async_setup_kernel(**kwargs):
-lint-and-test	Run tests	2026-04-01T13:44:34.6625900Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/contextlib.py:210: in __aenter__
-lint-and-test	Run tests	2026-04-01T13:44:34.6626545Z     return await anext(self.gen)
-lint-and-test	Run tests	2026-04-01T13:44:34.6626902Z            ^^^^^^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6627631Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbclient/client.py:648: in async_setup_kernel
-lint-and-test	Run tests	2026-04-01T13:44:34.6628470Z     await self.async_start_new_kernel(**kwargs)
-lint-and-test	Run tests	2026-04-01T13:44:34.6629301Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbclient/client.py:550: in async_start_new_kernel
-lint-and-test	Run tests	2026-04-01T13:44:34.6630361Z     await ensure_async(self.km.start_kernel(extra_arguments=self.extra_arguments, **kwargs))
-lint-and-test	Run tests	2026-04-01T13:44:34.6631446Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_core/utils/__init__.py:214: in ensure_async
-lint-and-test	Run tests	2026-04-01T13:44:34.6632464Z     result = await obj
-lint-and-test	Run tests	2026-04-01T13:44:34.6632737Z              ^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6633385Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/manager.py:97: in wrapper
-lint-and-test	Run tests	2026-04-01T13:44:34.6634122Z     raise e
-lint-and-test	Run tests	2026-04-01T13:44:34.6634963Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/manager.py:88: in wrapper
-lint-and-test	Run tests	2026-04-01T13:44:34.6635768Z     out = await method(self, *args, **kwargs)
-lint-and-test	Run tests	2026-04-01T13:44:34.6636169Z           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6637006Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/manager.py:441: in _async_start_kernel
-lint-and-test	Run tests	2026-04-01T13:44:34.6637920Z     kernel_cmd, kw = await self._async_pre_start_kernel(**kw)
-lint-and-test	Run tests	2026-04-01T13:44:34.6638406Z                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6639293Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/manager.py:403: in _async_pre_start_kernel
-lint-and-test	Run tests	2026-04-01T13:44:34.6640166Z     self.kernel_spec,
-lint-and-test	Run tests	2026-04-01T13:44:34.6640458Z     ^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6641170Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/manager.py:196: in kernel_spec
-lint-and-test	Run tests	2026-04-01T13:44:34.6642341Z     self._kernel_spec = self.kernel_spec_manager.get_kernel_spec(self.kernel_name)
-lint-and-test	Run tests	2026-04-01T13:44:34.6643019Z                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6643553Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-lint-and-test	Run tests	2026-04-01T13:44:34.6643900Z 
-lint-and-test	Run tests	2026-04-01T13:44:34.6644231Z self = <jupyter_client.kernelspec.KernelSpecManager object at 0x7fe38124d6d0>
-lint-and-test	Run tests	2026-04-01T13:44:34.6644796Z kernel_name = 'python3'
-lint-and-test	Run tests	2026-04-01T13:44:34.6644995Z 
-lint-and-test	Run tests	2026-04-01T13:44:34.6645244Z     def get_kernel_spec(self, kernel_name: str) -> KernelSpec:
-lint-and-test	Run tests	2026-04-01T13:44:34.6645851Z         """Returns a :class:`KernelSpec` instance for the given kernel_name.
-lint-and-test	Run tests	2026-04-01T13:44:34.6646351Z     
-lint-and-test	Run tests	2026-04-01T13:44:34.6646719Z         Raises :exc:`NoSuchKernel` if the given kernel name is not found.
-lint-and-test	Run tests	2026-04-01T13:44:34.6647202Z         """
-lint-and-test	Run tests	2026-04-01T13:44:34.6647492Z         if not _is_valid_kernel_name(kernel_name):
-lint-and-test	Run tests	2026-04-01T13:44:34.6647937Z             self.log.warning(
-lint-and-test	Run tests	2026-04-01T13:44:34.6648454Z                 f"Kernelspec name {kernel_name} is invalid: {_kernel_name_description}"
-lint-and-test	Run tests	2026-04-01T13:44:34.6649028Z             )
-lint-and-test	Run tests	2026-04-01T13:44:34.6649259Z     
-lint-and-test	Run tests	2026-04-01T13:44:34.6649630Z         resource_dir = self._find_spec_directory(kernel_name.lower())
-lint-and-test	Run tests	2026-04-01T13:44:34.6650132Z         if resource_dir is None:
-lint-and-test	Run tests	2026-04-01T13:44:34.6650497Z >           raise NoSuchKernel(kernel_name)
-lint-and-test	Run tests	2026-04-01T13:44:34.6651094Z E           jupyter_client.kernelspec.NoSuchKernel: No such kernel named python3
-lint-and-test	Run tests	2026-04-01T13:44:34.6651763Z 
-lint-and-test	Run tests	2026-04-01T13:44:34.6652488Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/kernelspec.py:287: NoSuchKernel
-lint-and-test	Run tests	2026-04-01T13:44:34.6653441Z ------------------------------ Captured log call -------------------------------
-lint-and-test	Run tests	2026-04-01T13:44:34.6654078Z ERROR    traitlets:manager.py:96 No such kernel named python3
-lint-and-test	Run tests	2026-04-01T13:44:34.6654580Z Traceback (most recent call last):
-lint-and-test	Run tests	2026-04-01T13:44:34.6661886Z   File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/manager.py", line 88, in wrapper
-lint-and-test	Run tests	2026-04-01T13:44:34.6663113Z     out = await method(self, *args, **kwargs)
-lint-and-test	Run tests	2026-04-01T13:44:34.6663607Z           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6664596Z   File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/manager.py", line 441, in _async_start_kernel
-lint-and-test	Run tests	2026-04-01T13:44:34.6665615Z     kernel_cmd, kw = await self._async_pre_start_kernel(**kw)
-lint-and-test	Run tests	2026-04-01T13:44:34.6666122Z                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6667110Z   File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/manager.py", line 403, in _async_pre_start_kernel
-lint-and-test	Run tests	2026-04-01T13:44:34.6668023Z     self.kernel_spec,
-lint-and-test	Run tests	2026-04-01T13:44:34.6668306Z     ^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6669085Z   File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/manager.py", line 196, in kernel_spec
-lint-and-test	Run tests	2026-04-01T13:44:34.6670455Z     self._kernel_spec = self.kernel_spec_manager.get_kernel_spec(self.kernel_name)
-lint-and-test	Run tests	2026-04-01T13:44:34.6671080Z                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-lint-and-test	Run tests	2026-04-01T13:44:34.6672079Z   File "/opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_client/kernelspec.py", line 287, in get_kernel_spec
-lint-and-test	Run tests	2026-04-01T13:44:34.6673344Z     raise NoSuchKernel(kernel_name)
-lint-and-test	Run tests	2026-04-01T13:44:34.6673886Z jupyter_client.kernelspec.NoSuchKernel: No such kernel named python3
-lint-and-test	Run tests	2026-04-01T13:44:34.6674557Z =========================== short test summary info ============================
-lint-and-test	Run tests	2026-04-01T13:44:34.6675861Z FAILED tests/integration/test_example_notebook.py::test_multi_hashing_example_notebook_runs - jupyter_client.kernelspec.NoSuchKernel: No such kernel named python3
-lint-and-test	Run tests	2026-04-01T13:44:34.6677135Z ======================== 1 failed, 67 passed in 14.73s =========================
-lint-and-test	Run tests	2026-04-01T13:44:34.8524072Z ##[error]Process completed with exit code 1.
+lint-and-test	Run tests	﻿2026-04-01T13:49:27.7769129Z ##[group]Run pytest tests
+lint-and-test	Run tests	2026-04-01T13:49:27.7769385Z [36;1mpytest tests[0m
+lint-and-test	Run tests	2026-04-01T13:49:27.7797675Z shell: /usr/bin/bash -e {0}
+lint-and-test	Run tests	2026-04-01T13:49:27.7797906Z env:
+lint-and-test	Run tests	2026-04-01T13:49:27.7798157Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.15/x64
+lint-and-test	Run tests	2026-04-01T13:49:27.7798566Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib/pkgconfig
+lint-and-test	Run tests	2026-04-01T13:49:27.7798956Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+lint-and-test	Run tests	2026-04-01T13:49:27.7799301Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+lint-and-test	Run tests	2026-04-01T13:49:27.7799646Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.15/x64
+lint-and-test	Run tests	2026-04-01T13:49:27.7800000Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.15/x64/lib
+lint-and-test	Run tests	2026-04-01T13:49:27.7800295Z ##[endgroup]
+lint-and-test	Run tests	2026-04-01T13:49:30.3461304Z ============================= test session starts ==============================
+lint-and-test	Run tests	2026-04-01T13:49:30.3462069Z platform linux -- Python 3.11.15, pytest-9.0.2, pluggy-1.6.0
+lint-and-test	Run tests	2026-04-01T13:49:30.3462640Z rootdir: /home/runner/work/deduplicate/deduplicate
+lint-and-test	Run tests	2026-04-01T13:49:30.3463355Z configfile: pyproject.toml
+lint-and-test	Run tests	2026-04-01T13:49:30.3463710Z plugins: mock-3.15.1, anyio-4.13.0
+lint-and-test	Run tests	2026-04-01T13:49:30.3464076Z collected 68 items
+lint-and-test	Run tests	2026-04-01T13:49:30.3464258Z 
+lint-and-test	Run tests	2026-04-01T13:49:36.7437706Z tests/integration/test_example_notebook.py F.                            [  2%]
+lint-and-test	Run tests	2026-04-01T13:49:39.2594544Z tests/integration/test_tol_find_and_deduplicate.py ....                  [  8%]
+lint-and-test	Run tests	2026-04-01T13:49:40.3295027Z tests/unit/core/test_duplicate_detection_algorithm.py .................. [ 35%]
+lint-and-test	Run tests	2026-04-01T13:49:40.3298433Z                                                                          [ 35%]
+lint-and-test	Run tests	2026-04-01T13:49:40.3321011Z tests/unit/core/test_registry.py ....                                    [ 41%]
+lint-and-test	Run tests	2026-04-01T13:49:43.8428683Z tests/unit/core/test_tolerance_calculator.py ......                      [ 50%]
+lint-and-test	Run tests	2026-04-01T13:49:43.8434889Z tests/unit/plugins/duplicate_detection_algoirthms/test_distance_matrix.py . [ 51%]
+lint-and-test	Run tests	2026-04-01T13:49:44.0425621Z ......                                                                   [ 60%]
+lint-and-test	Run tests	2026-04-01T13:49:44.0430532Z tests/unit/plugins/duplicate_detection_algoirthms/test_multi_hashing.py . [ 61%]
+lint-and-test	Run tests	2026-04-01T13:49:44.4451259Z ................                                                         [ 85%]
+lint-and-test	Run tests	2026-04-01T13:49:44.4455011Z tests/unit/plugins/tolerance_calculators/test_natural_tolerance_plateau_probe.py . [ 86%]
+lint-and-test	Run tests	2026-04-01T13:49:46.7014139Z ......                                                                   [ 95%]
+lint-and-test	Run tests	2026-04-01T13:49:46.7018273Z tests/unit/plugins/tolerance_calculators/test_perturbed_dataset_reclustering.py . [ 97%]
+lint-and-test	Run tests	2026-04-01T13:49:47.6247402Z ..                                                                       [100%]
+lint-and-test	Run tests	2026-04-01T13:49:47.6247875Z 
+lint-and-test	Run tests	2026-04-01T13:49:47.6248093Z =================================== FAILURES ===================================
+lint-and-test	Run tests	2026-04-01T13:49:47.6248701Z ___________________ test_multi_hashing_example_notebook_runs ___________________
+lint-and-test	Run tests	2026-04-01T13:49:47.6249124Z 
+lint-and-test	Run tests	2026-04-01T13:49:47.6249336Z     def test_multi_hashing_example_notebook_runs():
+lint-and-test	Run tests	2026-04-01T13:49:47.6249859Z         with open("examples/multi_hashing_demo.ipynb") as f:
+lint-and-test	Run tests	2026-04-01T13:49:47.6250346Z             nb = nbformat.read(f, as_version=4)
+lint-and-test	Run tests	2026-04-01T13:49:47.6250859Z         client = NotebookClient(nb, timeout=600, kernel_name="python3")
+lint-and-test	Run tests	2026-04-01T13:49:47.6251362Z >       client.execute()
+lint-and-test	Run tests	2026-04-01T13:49:47.6251561Z 
+lint-and-test	Run tests	2026-04-01T13:49:47.6251723Z tests/integration/test_example_notebook.py:12: 
+lint-and-test	Run tests	2026-04-01T13:49:47.6252202Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+lint-and-test	Run tests	2026-04-01T13:49:47.6253042Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/jupyter_core/utils/__init__.py:165: in wrapped
+lint-and-test	Run tests	2026-04-01T13:49:47.6253796Z     return loop.run_until_complete(inner)
+lint-and-test	Run tests	2026-04-01T13:49:47.6254159Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+lint-and-test	Run tests	2026-04-01T13:49:47.6255053Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/asyncio/base_events.py:654: in run_until_complete
+lint-and-test	Run tests	2026-04-01T13:49:47.6256265Z     return future.result()
+lint-and-test	Run tests	2026-04-01T13:49:47.6256534Z            ^^^^^^^^^^^^^^^
+lint-and-test	Run tests	2026-04-01T13:49:47.6257157Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbclient/client.py:709: in async_execute
+lint-and-test	Run tests	2026-04-01T13:49:47.6257870Z     await self.async_execute_cell(
+lint-and-test	Run tests	2026-04-01T13:49:47.6258557Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbclient/client.py:1062: in async_execute_cell
+lint-and-test	Run tests	2026-04-01T13:49:47.6259414Z     await self._check_raise_for_error(cell, cell_index, exec_reply)
+lint-and-test	Run tests	2026-04-01T13:49:47.6259955Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+lint-and-test	Run tests	2026-04-01T13:49:47.6260287Z 
+lint-and-test	Run tests	2026-04-01T13:49:47.6260524Z self = <nbclient.client.NotebookClient object at 0x7f8c30a0c150>
+lint-and-test	Run tests	2026-04-01T13:49:47.6262014Z cell = {'cell_type': 'code', 'execution_count': 1, 'id': 'dfed6dea', 'metadata': {'execution': {'iopub.status.busy': '2026-04...rturbed_dataset_reclustering import PerturbedDatasetReclustering\nimport numpy as np\nimport matplotlib.pyplot as plt'}
+lint-and-test	Run tests	2026-04-01T13:49:47.6263371Z cell_index = 1
+lint-and-test	Run tests	2026-04-01T13:49:47.6264778Z exec_reply = {'buffers': [], 'content': {'ename': 'ModuleNotFoundError', 'engine_info': {'engine_id': -1, 'engine_uuid': '96b4b2ac-...e, 'engine': '96b4b2ac-7b03-484d-92f6-9c85ca028038', 'started': '2026-04-01T13:49:31.413046Z', 'status': 'error'}, ...}
+lint-and-test	Run tests	2026-04-01T13:49:47.6265964Z 
+lint-and-test	Run tests	2026-04-01T13:49:47.6266088Z     async def _check_raise_for_error(
+lint-and-test	Run tests	2026-04-01T13:49:47.6266614Z         self, cell: NotebookNode, cell_index: int, exec_reply: dict[str, t.Any] | None
+lint-and-test	Run tests	2026-04-01T13:49:47.6267154Z     ) -> None:
+lint-and-test	Run tests	2026-04-01T13:49:47.6267413Z         if exec_reply is None:
+lint-and-test	Run tests	2026-04-01T13:49:47.6267718Z             return None
+lint-and-test	Run tests	2026-04-01T13:49:47.6267963Z     
+lint-and-test	Run tests	2026-04-01T13:49:47.6268238Z         exec_reply_content = exec_reply["content"]
+lint-and-test	Run tests	2026-04-01T13:49:47.6268652Z         if exec_reply_content["status"] != "error":
+lint-and-test	Run tests	2026-04-01T13:49:47.6269018Z             return None
+lint-and-test	Run tests	2026-04-01T13:49:47.6269282Z     
+lint-and-test	Run tests	2026-04-01T13:49:47.6269596Z         cell_allows_errors = (not self.force_raise_errors) and (
+lint-and-test	Run tests	2026-04-01T13:49:47.6270015Z             self.allow_errors
+lint-and-test	Run tests	2026-04-01T13:49:47.6270448Z             or exec_reply_content.get("ename") in self.allow_error_names
+lint-and-test	Run tests	2026-04-01T13:49:47.6270994Z             or "raises-exception" in cell.metadata.get("tags", [])
+lint-and-test	Run tests	2026-04-01T13:49:47.6271419Z         )
+lint-and-test	Run tests	2026-04-01T13:49:47.6271634Z         await run_hook(
+lint-and-test	Run tests	2026-04-01T13:49:47.6272108Z             self.on_cell_error, cell=cell, cell_index=cell_index, execute_reply=exec_reply
+lint-and-test	Run tests	2026-04-01T13:49:47.6272630Z         )
+lint-and-test	Run tests	2026-04-01T13:49:47.6273091Z         if not cell_allows_errors:
+lint-and-test	Run tests	2026-04-01T13:49:47.6273577Z >           raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
+lint-and-test	Run tests	2026-04-01T13:49:47.6274591Z E           nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
+lint-and-test	Run tests	2026-04-01T13:49:47.6275288Z E           ------------------
+lint-and-test	Run tests	2026-04-01T13:49:47.6275939Z E           from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import MultiHashing
+lint-and-test	Run tests	2026-04-01T13:49:47.6277063Z E           from deduplicate_lib.plugins.tolerance_calculators.natural_tolerance_plateau_probe import NaturalTolerancePlateauProbe
+lint-and-test	Run tests	2026-04-01T13:49:47.6278333Z E           from deduplicate_lib.plugins.tolerance_calculators.perturbed_dataset_reclustering import PerturbedDatasetReclustering
+lint-and-test	Run tests	2026-04-01T13:49:47.6279153Z E           import numpy as np
+lint-and-test	Run tests	2026-04-01T13:49:47.6279506Z E           import matplotlib.pyplot as plt
+lint-and-test	Run tests	2026-04-01T13:49:47.6279865Z E           ------------------
+lint-and-test	Run tests	2026-04-01T13:49:47.6280154Z E           
+lint-and-test	Run tests	2026-04-01T13:49:47.6280371Z E           
+lint-and-test	Run tests	2026-04-01T13:49:47.6281104Z E           [31m---------------------------------------------------------------------------[39m
+lint-and-test	Run tests	2026-04-01T13:49:47.6281940Z E           [31mModuleNotFoundError[39m                       Traceback (most recent call last)
+lint-and-test	Run tests	2026-04-01T13:49:47.6282650Z E           [36mCell[39m[36m [39m[32mIn[1][39m[32m, line 5[39m
+lint-and-test	Run tests	2026-04-01T13:49:47.6284926Z E           [32m      3[39m [38;5;28;01mfrom[39;00m[38;5;250m [39m[34;01mdeduplicate_lib[39;00m[34;01m.[39;00m[34;01mplugins[39;00m[34;01m.[39;00m[34;01mtolerance_calculators[39;00m[34;01m.[39;00m[34;01mperturbed_dataset_reclustering[39;00m[38;5;250m [39m[38;5;28;01mimport[39;00m PerturbedDatasetReclustering
+lint-and-test	Run tests	2026-04-01T13:49:47.6287061Z E           [32m      4[39m [38;5;28;01mimport[39;00m[38;5;250m [39m[34;01mnumpy[39;00m[38;5;250m [39m[38;5;28;01mas[39;00m[38;5;250m [39m[34;01mnp[39;00m
+lint-and-test	Run tests	2026-04-01T13:49:47.6288733Z E           [32m----> [39m[32m5[39m [38;5;28;01mimport[39;00m[38;5;250m [39m[34;01mmatplotlib[39;00m[34;01m.[39;00m[34;01mpyplot[39;00m[38;5;250m [39m[38;5;28;01mas[39;00m[38;5;250m [39m[34;01mplt[39;00m
+lint-and-test	Run tests	2026-04-01T13:49:47.6289685Z E           
+lint-and-test	Run tests	2026-04-01T13:49:47.6290143Z E           [31mModuleNotFoundError[39m: No module named 'matplotlib'
+lint-and-test	Run tests	2026-04-01T13:49:47.6290494Z 
+lint-and-test	Run tests	2026-04-01T13:49:47.6290965Z /opt/hostedtoolcache/Python/3.11.15/x64/lib/python3.11/site-packages/nbclient/client.py:918: CellExecutionError
+lint-and-test	Run tests	2026-04-01T13:49:47.6291770Z =========================== short test summary info ============================
+lint-and-test	Run tests	2026-04-01T13:49:47.6293237Z FAILED tests/integration/test_example_notebook.py::test_multi_hashing_example_notebook_runs - nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
+lint-and-test	Run tests	2026-04-01T13:49:47.6294562Z ------------------
+lint-and-test	Run tests	2026-04-01T13:49:47.6295096Z from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import MultiHashing
+lint-and-test	Run tests	2026-04-01T13:49:47.6296174Z from deduplicate_lib.plugins.tolerance_calculators.natural_tolerance_plateau_probe import NaturalTolerancePlateauProbe
+lint-and-test	Run tests	2026-04-01T13:49:47.6297364Z from deduplicate_lib.plugins.tolerance_calculators.perturbed_dataset_reclustering import PerturbedDatasetReclustering
+lint-and-test	Run tests	2026-04-01T13:49:47.6298107Z import numpy as np
+lint-and-test	Run tests	2026-04-01T13:49:47.6298395Z import matplotlib.pyplot as plt
+lint-and-test	Run tests	2026-04-01T13:49:47.6298715Z ------------------
+lint-and-test	Run tests	2026-04-01T13:49:47.6298861Z 
+lint-and-test	Run tests	2026-04-01T13:49:47.6298867Z 
+lint-and-test	Run tests	2026-04-01T13:49:47.6299226Z [31m---------------------------------------------------------------------------[39m
+lint-and-test	Run tests	2026-04-01T13:49:47.6299988Z [31mModuleNotFoundError[39m                       Traceback (most recent call last)
+lint-and-test	Run tests	2026-04-01T13:49:47.6300650Z [36mCell[39m[36m [39m[32mIn[1][39m[32m, line 5[39m
+lint-and-test	Run tests	2026-04-01T13:49:47.6302447Z [32m      3[39m [38;5;28;01mfrom[39;00m[38;5;250m [39m[34;01mdeduplicate_lib[39;00m[34;01m.[39;00m[34;01mplugins[39;00m[34;01m.[39;00m[34;01mtolerance_calculators[39;00m[34;01m.[39;00m[34;01mperturbed_dataset_reclustering[39;00m[38;5;250m [39m[38;5;28;01mimport[39;00m PerturbedDatasetReclustering
+lint-and-test	Run tests	2026-04-01T13:49:47.6304942Z [32m      4[39m [38;5;28;01mimport[39;00m[38;5;250m [39m[34;01mnumpy[39;00m[38;5;250m [39m[38;5;28;01mas[39;00m[38;5;250m [39m[34;01mnp[39;00m
+lint-and-test	Run tests	2026-04-01T13:49:47.6306477Z [32m----> [39m[32m5[39m [38;5;28;01mimport[39;00m[38;5;250m [39m[34;01mmatplotlib[39;00m[34;01m.[39;00m[34;01mpyplot[39;00m[38;5;250m [39m[38;5;28;01mas[39;00m[38;5;250m [39m[34;01mplt[39;00m
+lint-and-test	Run tests	2026-04-01T13:49:47.6307307Z 
+lint-and-test	Run tests	2026-04-01T13:49:47.6307600Z [31mModuleNotFoundError[39m: No module named 'matplotlib'
+lint-and-test	Run tests	2026-04-01T13:49:47.6308226Z ======================== 1 failed, 67 passed in 18.10s =========================
+lint-and-test	Run tests	2026-04-01T13:49:48.2029350Z ##[error]Process completed with exit code 1.

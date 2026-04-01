@@ -28,7 +28,8 @@ dev = [
     "nbconvert", 
     "nbclient",
     "notebook",
-    "ipykernel"]
+    "ipykernel",
+    "matplotlib",]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
