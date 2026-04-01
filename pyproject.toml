@@ -20,7 +20,7 @@ package-dir = {"" = "src"}
 version = {attr = "deduplicate_lib.__version__"}
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-mock", "coverage", "ruff"]
+dev = ["pytest", "pytest-mock", "coverage", "ruff", "nbconvert", "nbclient"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
