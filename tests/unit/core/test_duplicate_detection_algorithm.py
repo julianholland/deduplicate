@@ -1,3 +1,5 @@
+from multiprocessing import dummy
+
 import pytest
 import numpy as np
 from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
@@ -73,20 +75,38 @@ def test_calculate_distance(dummy_dda):
         assert np.allclose(results, expected_results, atol=tolerance)
 
 def test_compute_distance_matrix(dummy_dda):
+    dummy_dda.dataset_array=np.array([[0.,1.],[0.,2.]])
+    dummy_dda.dataset_vector_number=len(dummy_dda.dataset_array)
+    dummy_dda.distance_metric = "euclidean"
     dummy_dda.compute_distance_matrix(dummy_dda.dataset_array)
-    assert dummy_dda.distance_matrix.shape == (1, 1)
-    assert np.isclose(dummy_dda.distance_matrix[0, 0], 0.0)
+    dist_mat=dummy_dda.get_distance_matrix()
+    assert dist_mat.shape == (2, 2)
+    assert np.isclose(dist_mat[0, 0], 0.0)
+    assert np.isclose(dist_mat[0,1], 1.0)
+    assert dist_mat[0,1] == dist_mat[1,0]
+    dummy_dda.dataset_array=np.array([[1.,2.]])
+    dummy_dda.dataset_vector_number=len(dummy_dda.dataset_array)
 
-def test_get_new_distance_matrix_column(dummy_dda):
-    new_distances = dummy_dda.get_new_distance_matrix_column(dummy_dda.dataset_array)
-    assert new_distances.shape == (1,)
-    assert np.isclose(new_distances[0], 0.0)
+def test_compute_distance_matrix_for_size_one(dummy_dda):
+    dummy_dda.dataset_vector_number=len(dummy_dda.dataset_array)
+    dummy_dda.compute_distance_matrix(dummy_dda.dataset_array)
+    dist_mat=dummy_dda.get_distance_matrix()
+    assert dist_mat.shape == (1, 1)
+    assert np.isclose(dist_mat[0, 0], 0.0)
+
+def test_update_distance_vector(dummy_dda):
+    dummy_dda.update_distance_vector(dummy_dda.input_vector)
+    assert dummy_dda.distance_vector.shape == (1,)
+    assert np.isclose(dummy_dda.distance_vector[0], 0.0)
+    
 
 def test_add_new_vector_to_distance_matrix(dummy_dda):
     dummy_dda.compute_distance_matrix(dummy_dda.dataset_array)
-    dummy_dda.add_new_vector_to_distance_matrix(dummy_dda.dataset_array)
-    assert dummy_dda.distance_matrix.shape == (2, 2)
-
+    dummy_dda.add_new_vector_to_distance_matrix(dummy_dda.input_vector)
+    dummy_dda.dataset_vector_number += 1
+    dist_mat=dummy_dda.get_distance_matrix()
+    assert dist_mat.shape == (2, 2)
+    
 def test_pass_only_methods_do_not_raise(dummy_dda):
     dummy_dda.pre_dda_processing()
     dummy_dda.add_input_vector_to_dda()

@@ -1,7 +1,7 @@
 import numpy as np
 from abc import ABC, abstractmethod
 from numba import njit
-from utils.array_manager import DataArray
+from deduplicate_lib.utils.array_manager import DataArray
 
 
 @njit
@@ -12,9 +12,7 @@ def fast_compute_distance_matrix(vector_array, distance_func):
     distance_matrix = np.zeros((num_samples, num_samples))  # pragma: no cover
     for i in range(num_samples):  # pragma: no cover
         for j in range(i + 1, num_samples):  # pragma: no cover
-            distance = distance_func(
-                vector_array[i], vector_array[j]
-            )  # pragma: no cover
+            distance = distance_func(vector_array[i], vector_array[j])  # pragma: no cover
             distance_matrix[i, j] = distance  # pragma: no cover
             distance_matrix[j, i] = distance  # pragma: no cover
     return distance_matrix  # pragma: no cover
@@ -76,17 +74,36 @@ class DuplicateDetectionAlgorithm(ABC):
         self,
         tolerance: float,
         input_vector: np.ndarray = np.array([]),
-        dataset_array: DataArray = DataArray(),
-        distance_matrix: DataArray = DataArray(),
+        dataset_array: np.ndarray = np.array([]),
+        distance_matrix: np.ndarray = np.array([]),
+        distance_vector: np.ndarray = np.array([]),
         distance_metric: str = "euclidean",
         unique_vector_indices: np.ndarray = np.array([]),
+        max_dataset_size: int = 10000,
     ) -> None:
+
         self.tolerance = tolerance
         self.input_vector = input_vector
         self.dataset_array = dataset_array
-        self.distance_matrix = distance_matrix
         self.distance_metric = distance_metric
         self.unique_vector_indices = unique_vector_indices
+        self.max_dataset_size = max_dataset_size
+        self.distance_matrix = distance_matrix
+        self.distance_vector = distance_vector
+        self.dataset_vector_number = len(dataset_array)
+
+        if len(self.dataset_array) > 0:
+            self.vector_length = self.dataset_array.shape[1]
+        elif len(self.input_vector) > 0:
+            self.vector_length = self.input_vector.shape[0]
+        else:
+            self.vector_length = 0
+        self._dataset_array = DataArray(
+            fixed_sizes=[self.vector_length],
+            assumed_maximum_variable_dimension_sizes=[self.max_dataset_size],
+            input_data_array=self.dataset_array,
+            dimension_order=["variable_0", "fixed_0"],
+        )
 
     # In DuplicateDetectionAlgorithm
 
@@ -109,42 +126,51 @@ class DuplicateDetectionAlgorithm(ABC):
 
     def compute_distance_matrix(self, vector_array: np.ndarray) -> None:
         """Compute the distance matrix for the dataset from scratch."""
-        self.distance_matrix = DataArray(
-            fixed_sizes=[len(vector_array), len(vector_array)],
-            assumed_maximum_variable_dimension_sizes=[],
-            data_array=fast_compute_distance_matrix(
+
+        # set up _distance_matrix so it is quick to add new input vectors to it without needing to resize the array which can be very slow
+
+        self._distance_matrix = DataArray(
+            [],
+            [self.max_dataset_size, self.max_dataset_size],
+            input_data_array=fast_compute_distance_matrix(
                 vector_array, self.distance_function
             ),
+            dimension_order=["variable_0", "variable_1"],
         )
 
-    def get_new_distance_matrix_column(self, vector_array: np.ndarray) -> np.ndarray:
-        """Calculates the distance matrix for the distances of a new input vector.
+    def update_distance_vector(self, vector: np.ndarray) -> None:
+        """Calculates the distance vector for the distances of a new input vector.
 
         Returns:
             np.ndarray: A 1D array containing the distances from the input vector to each vector in the dataset.
         """
-        return fast_get_new_distance_matrix_column(
-            self.input_vector, vector_array, self.distance_function
+        self.distance_vector = fast_get_new_distance_matrix_column(
+            input_vector=vector,
+            vector_array=self._dataset_array.data_array[: self.dataset_vector_number],
+            distance_func=self.distance_function,
         )
 
-    def add_new_vector_to_distance_matrix(self, vector_array: np.ndarray) -> None:
+    def add_new_vector_to_distance_matrix(self, vector: np.ndarray) -> None:
         """Add a new input vector to the distance matrix."""
-        new_distances = self.get_new_distance_matrix_column(vector_array)
-        
-        self.distance_matrix.add_input_vector_to_data_array(
-            input_vector=new_distances,
-            input_indices=(self.distance_matrix.data_array.shape[0], slice(None)),
+        self.update_distance_vector(vector)
+        self._distance_matrix.add_input_vector_to_data_array(
+            self.distance_vector,
+            (slice(0, self.dataset_vector_number), slice(self.dataset_vector_number, self.dataset_vector_number + 1)),
         )
-        self.distance_matrix.add_input_vector_to_data_array(
-            input_vector=new_distances,
-            input_indices=(slice(None), self.distance_matrix.data_array.shape[1]),
+        self._distance_matrix.add_input_vector_to_data_array(
+            np.append(self.distance_vector, 0),
+            (
+                slice(self.dataset_vector_number, self.dataset_vector_number + 1),
+                slice(0, self.dataset_vector_number + 1),
+            ),
         )
-        
-        
 
-    def pre_dda_processing(
-        self, input_dataset_array: np.ndarray | None = None, *args, **kwargs
-    ) -> None:
+    def get_distance_matrix(self) -> np.ndarray:
+        """Returns the distance matrix for the dataset."""
+        dimension_tuple = (self.dataset_vector_number, self.dataset_vector_number)
+        return self._distance_matrix.remove_unoccupied_vectors(dimension_tuple)
+
+    def pre_dda_processing(self, *args, **kwargs) -> None:
         """A method that can be overridden by child classes to perform any necessary processing before duplication checks. For example, this could be used to compute the distance matrix for the dataset before any duplication checks are performed, which would save time if multiple duplication checks are being performed on the same dataset with different input vectors."""
         pass
 

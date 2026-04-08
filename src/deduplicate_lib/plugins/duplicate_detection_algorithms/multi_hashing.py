@@ -3,7 +3,7 @@ from deduplicate_lib.core.duplicate_detection_algorithm import (
     hamming_distance,
 )
 from deduplicate_lib.core.plugin_registry import register_plugin
-
+from deduplicate_lib.utils.array_manager import DataArray
 import numpy as np
 import warnings
 from numba import njit
@@ -25,6 +25,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         tolerance: float = 0.1,
         input_vector: np.ndarray = np.array([]),
         dataset_array: np.ndarray = np.array([]),
+        max_dataset_size: int = 10000,
         perturbations: int = 200,
         seed: int = 803,
         pertrubation_array: np.ndarray = np.array([]),
@@ -41,6 +42,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             distance_metric=distance_metric,
             distance_matrix=distance_matrix,
             unique_vector_indices=unique_vector_indices,
+            max_dataset_size=max_dataset_size,
         )
         self.seed = seed
         self.acceptance_threshold = acceptance_threshold
@@ -77,23 +79,22 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             hash_vector[i] = hash(rounded_and_perturbed[i].tobytes())
         return hash_vector
 
-    def create_hash_vector_array(self) -> np.ndarray:
+    def create_hash_vector_array(self):
         """Creates the hash vector array for the dataset. Only unique hash values are stored for each perturbation.
 
         Returns:
             np.ndarray: A 2D array containing the hash values for each vector in the dataset for each perturbation.
         """
-        self.hash_vector_array = np.zeros(
-            (self.dataset_array.shape[0], self.perturbations), dtype=int
-        )
+        self.hash_vector_array = np.zeros((self.dataset_vector_number, self.perturbations), dtype=int)
         self._ensure_perturbation_array()
-        for i in range(self.dataset_array.shape[0]):
-            self.input_vector = self.dataset_array[i]
+        for i in range(self.dataset_vector_number):
+            self.input_vector = self._dataset_array.data_array[i]
             hash_vector = self.create_hash_vector()
             for j in range(self.perturbations):
                 if hash_vector[j] not in self.hash_vector_array[:, j]:
                     self.hash_vector_array[i, j] = hash_vector[j]
-        return self.hash_vector_array
+        
+        self._hash_vector_array = DataArray([self.perturbations], [self.max_dataset_size], self.hash_vector_array, ['variable_0', 'fixed_0'])
 
     def _ensure_hash_vector_array(self):
         if self.hash_vector_array.shape[0] != self.dataset_array.shape[0]:
@@ -113,7 +114,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
 
         clash_vector = np.zeros(self.perturbations, dtype=bool)
         for hash_index, hash_value in enumerate(hash_vector):
-            if hash_value in self.hash_vector_array[:, hash_index]:
+            if hash_value in self._hash_vector_array.data_array[:, hash_index]:
                 clash_vector[hash_index] = True
         duplicate_vote_array = np.sum(clash_vector) / self.perturbations
 
@@ -136,9 +137,11 @@ class MultiHashing(DuplicateDetectionAlgorithm):
     
     def pre_dda_processing(self, *args, **kwargs) -> None:
         self.set_perturbation_array()
+        self._dataset_array = DataArray([self.dataset_array.shape[1]], [self.max_dataset_size], self.dataset_array, ['variable_0', 'fixed_0'])
 
     def add_input_vector_to_dda(self) -> None:
         """Add the input vector to the dataset array and update the hash vector array accordingly."""
-        self.dataset_array = np.vstack((self.dataset_array, self.input_vector))
+        self._dataset_array.add_input_vector_to_data_array(self.input_vector, (self.dataset_vector_number,))
         new_hash_vector = self.create_hash_vector()
-        self.hash_vector_array = np.vstack((self.hash_vector_array, new_hash_vector))
+        self._hash_vector_array.add_input_vector_to_data_array(new_hash_vector, (self.dataset_vector_number,))
+        self.dataset_vector_number += 1
