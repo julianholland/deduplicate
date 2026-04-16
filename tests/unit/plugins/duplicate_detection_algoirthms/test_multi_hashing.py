@@ -27,7 +27,7 @@ def test_str_representation():
         dataset_array=np.array([[1.0, 2.0]]),
         distance_matrix=np.array([]),
     )
-    assert str(dm) == "MultiHashing(tolerance=0.1, perturbations=200, acceptance_threshold=0.5)"
+    assert str(dm) == "MultiHashing(tolerance=0.1, perturbations=200, sigma_acceptance_threshold=1)"
 
 def test_set_perturbation_array(multi_hashing_dda):
     dda = multi_hashing_dda

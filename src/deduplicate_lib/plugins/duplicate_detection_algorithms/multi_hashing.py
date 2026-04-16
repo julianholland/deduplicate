@@ -60,7 +60,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         self.perturbation_array = pertrubation_array
 
     def __str__(self) -> str:
-        return f"MultiHashing(tolerance={self.tolerance}, perturbations={self.perturbations}, acceptance_threshold={self.acceptance_threshold})"
+        return f"MultiHashing(tolerance={self.tolerance}, perturbations={self.perturbations}, sigma_acceptance_threshold={self.sigma_accepatnce_threshold})"
 
     def set_perturbation_array(self) -> None:
         rng = np.random.default_rng(self.seed)
