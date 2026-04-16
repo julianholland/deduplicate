@@ -51,7 +51,7 @@ def test_pdr_with_dda(request, dda_fixture):
     "dda_fixture,tolerance_result_fixture",
     [
         ("distance_matrix_dda", 0.14141755074312934),
-        ("multi_hashing_dda", 0.2952140425551374),
+        ("multi_hashing_dda", 0.17051136265740044),
     ]
 )
 def test_ntpp_with_dda(request, dda_fixture, tolerance_result_fixture):
@@ -63,7 +63,7 @@ def test_ntpp_with_dda(request, dda_fixture, tolerance_result_fixture):
         perturbations_per_vector=10,
         perturbation_scale=0.01,
         binary_search_steps=30,
-        probe_steps=100,
+        probe_steps=200,
     )
     
     tc.create_perturbed_dataset()

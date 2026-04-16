@@ -10,22 +10,17 @@ from numba import njit
 
 @njit
 def fast_round_and_perturb(input_vector, perturbation_array, tolerance):
-    n_pert = perturbation_array.shape[0]
-    n_feat = input_vector.shape[0]
-    out = np.empty((n_pert, n_feat), dtype=input_vector.dtype)
+    n_pert = perturbation_array.shape[0] # pragma: no cover
+    n_feat = input_vector.shape[0] # pragma: no cover
+    out = np.empty((n_pert, n_feat), dtype=input_vector.dtype) # pragma: no cover
 
-    for i in range(n_pert):
-        p = perturbation_array[i]
-        for j in range(n_feat):
-            v = p * input_vector[j]
-            out[i, j] = np.round(v / tolerance) * tolerance
+    for i in range(n_pert): # pragma: no cover
+        p = perturbation_array[i] # pragma: no cover
+        for j in range(n_feat): # pragma: no cover
+            v = p * input_vector[j]# pragma: no cover
+            out[i, j] = np.round(v / tolerance) * tolerance # pragma: no cover
 
-    return out 
-# def fast_round_and_perturb(input_vector, perturbation_array, tolerance):
-#     perturbed_vector_array = np.array([perturbation_array[i] * input_vector for i in range(perturbation_array.shape[0])])
-#     round_and_perturb_array = np.round(perturbed_vector_array / tolerance) * tolerance # pragma: no cover, tested but does not appear in coverage report due to numba jit compilation
-    
-#     return round_and_perturb_array # pragma: no cover
+    return out # pragma: no cover
 
 @register_plugin(kind="duplicate_detection_algorithm", name="multi_hashing")
 class MultiHashing(DuplicateDetectionAlgorithm):
@@ -59,6 +54,8 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         self.hash_vector_array = hash_vector_array
         self.perturbation_array = pertrubation_array
 
+        self.set_acceptance_threshold()
+
     def __str__(self) -> str:
         return f"MultiHashing(tolerance={self.tolerance}, perturbations={self.perturbations}, sigma_acceptance_threshold={self.sigma_accepatnce_threshold})"
 
@@ -76,7 +73,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             )
             self.set_perturbation_array()
 
-    def get_acceptance_threshold(self) -> float:
+    def set_acceptance_threshold(self) -> None:
         if self.sigma_accepatnce_threshold < 1 or self.sigma_accepatnce_threshold > 4 or not isinstance(self.sigma_accepatnce_threshold, int):
             raise ValueError("Sigma acceptance threshold must be an integer between 1 and 4 inclusive.")
         sigma_dict = {
@@ -85,7 +82,10 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             3: 0.997300203936740,
             4: 0.999936657516333,
         }
-        return sigma_dict[self.sigma_accepatnce_threshold]
+        if 1/(1-sigma_dict[self.sigma_accepatnce_threshold]) > self.perturbations and self.sigma_accepatnce_threshold > 1:
+            warnings.warn(f"Sigma acceptance threshold of {self.sigma_accepatnce_threshold} corresponds to an acceptance threshold of {sigma_dict[self.sigma_accepatnce_threshold]} which may be too high for the number of perturbations ({self.perturbations}) and could lead to false positives. Consider lowering the sigma acceptance threshold or increasing the number of perturbations to over {int(np.ceil(1/(1-sigma_dict[self.sigma_accepatnce_threshold])))}.")
+            
+        self.acceptance_threshold = sigma_dict[self.sigma_accepatnce_threshold]
 
     def round_to_tolerance(self) -> np.ndarray:
         rounded_vector = np.round(self.input_vector / self.tolerance) * self.tolerance
@@ -140,7 +140,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
                 clash_vector[hash_index] = True
         duplicate_vote_array = np.sum(clash_vector) / self.perturbations
 
-        duplicate_structure = duplicate_vote_array >= self.get_acceptance_threshold()
+        duplicate_structure = duplicate_vote_array >= self.acceptance_threshold
 
         return bool(duplicate_structure)
     
@@ -164,7 +164,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         self.create_hash_vector_array()
         clash_array = np.zeros((self.hash_vector_array.shape), dtype=bool)
         clash_array[np.nonzero(self.hash_vector_array)] = True
-        self.unique_vector_indices = np.sum(clash_array, axis=1) / self.perturbations >= self.get_acceptance_threshold()
+        self.unique_vector_indices = np.sum(clash_array, axis=1) / self.perturbations >= self.acceptance_threshold
         
         return np.sum(self.unique_vector_indices)
     

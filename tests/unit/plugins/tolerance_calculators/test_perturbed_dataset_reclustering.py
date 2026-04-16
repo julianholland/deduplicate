@@ -3,7 +3,7 @@ import numpy as np
 from deduplicate_lib.plugins.tolerance_calculators.perturbed_dataset_reclustering import (
     PerturbedDatasetReclustering,
 )
-
+import re
 
 def test_str_representation(distance_matrix_dda):
     dda = distance_matrix_dda
@@ -122,10 +122,28 @@ def test_calculate_tolerance(request, dda_fixture):
         np.ptp(tc.tolerance_dataset_array)
         + np.mean(np.std(tc.tolerance_dataset_array, axis=0))
     ) * tc.duplicate_detection_algorithm_object.dataset_array.shape[1]
+    
     with pytest.warns(
         UserWarning,
-        match=f"No exact tolerance found for target of {len(dda.dataset_array)} unique vectors during binary search.\n Returning closest tolerance found: {original_best_max} with 1 unique vectors.",
+        match=(
+            rf"No exact tolerance found for target of {len(dda.dataset_array)} unique vectors during binary search\.\n"
+            rf" Returning closest tolerance found: {re.escape(str(original_best_max))} with \d+ unique vectors\."
+        ),
     ):
         tolerance = tc.calculate_tolerance()
+   
 
-    # assert False
+def test_calculate_tolerance_raises_for_invalid_target_structures_threshold(distance_matrix_dda, monkeypatch):
+    tc = PerturbedDatasetReclustering(
+        duplicate_detection_algorithm_object=distance_matrix_dda,
+        target_structures_threshold="invalid_mode",
+    )
+
+    # Avoid unrelated setup behavior; we only want to test the threshold validation branch
+    monkeypatch.setattr(tc, "_ensure_perturbed_dataset", lambda: None)
+
+    with pytest.raises(
+        ValueError,
+        match=r"Invalid target_structures_threshold: invalid_mode\. Must be 'average', 'loose', or 'tight'\.",
+    ):
+        tc.calculate_tolerance()

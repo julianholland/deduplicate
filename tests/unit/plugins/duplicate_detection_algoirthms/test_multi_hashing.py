@@ -1,3 +1,5 @@
+import re
+
 from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
     MultiHashing,
 )
@@ -138,7 +140,27 @@ def test_duplicate_check_if_hash_vector_array_wrong_shape(multi_hashing_dda):
     with pytest.warns(UserWarning, match="Hash vector array shape does not match dataset; recomputing."):
         duplicate_check = dda.duplicate_check()
     assert duplicate_check
-    
+
+def test_set_acceptance_threshold(multi_hashing_dda):
+    dda = multi_hashing_dda
+    dda.sigma_accepatnce_threshold = 2
+    dda.perturbations = 200
+    dda.set_acceptance_threshold()
+    assert dda.acceptance_threshold == 0.954499736103642
+    dda.perturbations = 5
+
+def test_set_acceptance_threshold_bad_sigma(multi_hashing_dda):
+    dda = multi_hashing_dda
+    dda.sigma_accepatnce_threshold = 5  # not in the sigma_dict
+    with pytest.raises(ValueError, match=r"Sigma acceptance threshold must be an integer between 1 and 4 inclusive."):
+        dda.set_acceptance_threshold()
+
+def test_set_acceptance_threshold_warning(multi_hashing_dda):
+    dda = multi_hashing_dda
+    dda.sigma_accepatnce_threshold = 2
+    dda.perturbations = 5
+    with pytest.warns(UserWarning, match=re.escape("Sigma acceptance threshold of 2 corresponds to an acceptance threshold of 0.954499736103642 which may be too high for the number of perturbations (5) and could lead to false positives. Consider lowering the sigma acceptance threshold or increasing the number of perturbations to over 22.")):
+        dda.set_acceptance_threshold()
 
 def test_get_dataset_unique_structures(multi_hashing_dda):
     dda = multi_hashing_dda
@@ -171,3 +193,16 @@ def test_add_input_vector_to_dda(multi_hashing_dda):
     assert dda.dataset_array.shape[0] == initial_dataset_size + 1
     assert np.array_equal(dda.dataset_array[-1], dda.input_vector)
     assert dda.hash_vector_array.shape[0] == initial_dataset_size + 1
+
+def test_get_uniqueness_score(multi_hashing_dda):
+    dda = multi_hashing_dda
+    dda.set_perturbation_array()
+    dda.create_hash_vector_array()
+    dda.input_vector = dda.dataset_array[0]  # identical to first dataset vector, should be classified as duplicate
+    uniqueness_score=dda.get_uniqueness_score()
+
+    assert uniqueness_score == 0.0
+
+    dda.input_vector = np.array([10.0, 20.0])  # different from all dataset vectors, should be classified as unique
+    uniqueness_score=dda.get_uniqueness_score()
+    assert uniqueness_score > 0.0 and uniqueness_score <= 1.0
