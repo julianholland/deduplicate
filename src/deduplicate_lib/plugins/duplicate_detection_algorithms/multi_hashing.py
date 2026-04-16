@@ -39,8 +39,8 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         perturbations: int = 200,
         seed: int = 803,
         pertrubation_array: np.ndarray = np.array([]),
-        acceptance_threshold: float = 0.5,
         distance_metric: str = "hamming",
+        sigma_accepatnce_threshold: int = 1,
         distance_matrix: np.ndarray = np.array([]),
         hash_vector_array: np.ndarray = np.array([]),
         unique_vector_indices: np.ndarray = np.array([]),
@@ -54,7 +54,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             unique_vector_indices=unique_vector_indices,
         )
         self.seed = seed
-        self.acceptance_threshold = acceptance_threshold
+        self.sigma_accepatnce_threshold = sigma_accepatnce_threshold
         self.perturbations = perturbations
         self.hash_vector_array = hash_vector_array
         self.perturbation_array = pertrubation_array
@@ -75,6 +75,17 @@ class MultiHashing(DuplicateDetectionAlgorithm):
                 "Perturbation array shape does not match expected number of perturbations; recomputing. \nAssign the perturbation array prior duplication checks to avoid this warning."
             )
             self.set_perturbation_array()
+
+    def get_acceptance_threshold(self) -> float:
+        if self.sigma_accepatnce_threshold < 1 or self.sigma_accepatnce_threshold > 4 or not isinstance(self.sigma_accepatnce_threshold, int):
+            raise ValueError("Sigma acceptance threshold must be an integer between 1 and 4 inclusive.")
+        sigma_dict = {
+            1: 0.682689492137086,
+            2: 0.954499736103642,
+            3: 0.997300203936740,
+            4: 0.999936657516333,
+        }
+        return sigma_dict[self.sigma_accepatnce_threshold]
 
     def round_to_tolerance(self) -> np.ndarray:
         rounded_vector = np.round(self.input_vector / self.tolerance) * self.tolerance
@@ -129,7 +140,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
                 clash_vector[hash_index] = True
         duplicate_vote_array = np.sum(clash_vector) / self.perturbations
 
-        duplicate_structure = duplicate_vote_array >= self.acceptance_threshold
+        duplicate_structure = duplicate_vote_array >= self.get_acceptance_threshold()
 
         return bool(duplicate_structure)
     
@@ -153,7 +164,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         self.create_hash_vector_array()
         clash_array = np.zeros((self.hash_vector_array.shape), dtype=bool)
         clash_array[np.nonzero(self.hash_vector_array)] = True
-        self.unique_vector_indices = np.sum(clash_array, axis=1) / self.perturbations >= self.acceptance_threshold
+        self.unique_vector_indices = np.sum(clash_array, axis=1) / self.perturbations >= self.get_acceptance_threshold()
         
         return np.sum(self.unique_vector_indices)
     
