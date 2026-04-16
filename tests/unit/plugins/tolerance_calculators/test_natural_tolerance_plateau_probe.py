@@ -61,19 +61,25 @@ def test_find_plateaus(distance_matrix_dda):
     }
     no_plateau_results = {tol: i for i, tol in enumerate(tol_values)}
 
+    tc.datapoints_to_calculate_gradient=2
+    tc.plateau_threshold=0.1
     plateaus = tc.find_plateaus(
-        three_plateau_results, datapoints_to_calculate_gradient=2, plateau_threshold=0.1
+        three_plateau_results
     )
+
     assert len(plateaus) == 3
 
     for start_tol, end_tol, length in plateaus:
         print(f"Plateau from {start_tol} to {end_tol} with length {length}")
         assert end_tol > start_tol
         assert length >= 2
-
+    
+    tc.datapoints_to_calculate_gradient=2
+    tc.plateau_threshold=0.1
     no_plateaus = tc.find_plateaus(
-        no_plateau_results, datapoints_to_calculate_gradient=2, plateau_threshold=0.1
+        no_plateau_results
     )
+    
     assert len(no_plateaus) == 0
 
 
@@ -166,16 +172,18 @@ def test_get_plateau_log(request, dda_fixture):
 
     sorted_tols=sorted(three_plateau_results.keys())
     with pytest.raises(ValueError, match="datapoints_to_calculate_gradient must be greater than 1."):
+        tc.datapoints_to_calculate_gradient=1
+        tc.plateau_threshold=0.1
         tc.get_plateau_log(
             sorted_tols=sorted_tols,
             tolerance_results=three_plateau_results,
-            datapoints_to_calculate_gradient=1,
-            plateau_threshold=0.1,
-        )
 
-    plateau_log = tc.get_plateau_log(sorted_tols, three_plateau_results, datapoints_to_calculate_gradient=2, plateau_threshold=0.1)
-        
+        )
     
+    tc.datapoints_to_calculate_gradient=2
+    tc.plateau_threshold=0.1    
+    plateau_log = tc.get_plateau_log(sorted_tols, three_plateau_results)
+
     print(f'plateau log size{len(plateau_log)}\n',
           f'plateau_log: {plateau_log}')
 

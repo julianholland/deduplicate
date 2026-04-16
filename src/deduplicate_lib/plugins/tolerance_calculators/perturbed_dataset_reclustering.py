@@ -75,3 +75,5 @@ class PerturbedDatasetReclustering(ToleranceCalculator):
                 target_unique_vectors=self.target_structures,
                 find_largest_tolerance_for_target=False,
             )
+        else:
+            raise ValueError(f"Invalid target_structures_threshold: {self.target_structures_threshold}. Must be 'average', 'loose', or 'tight'.")

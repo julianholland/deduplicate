@@ -52,7 +52,7 @@ def distance_matrix_dda():
     return DistanceMatrix(
         tolerance=0.1,
         input_vector=np.array([1.0, 2.0]),
-        dataset_array=np.array([[0.1, 0.2], [1.01, 2.01], [0.0, 20.0]]),
+        dataset_array=np.array([[1.0, 2.0], [1.01, 2.01], [0.0, 2.0]]),
     )
 
 
@@ -62,5 +62,5 @@ def multi_hashing_dda():
         tolerance=0.01,
         perturbations=5,
         input_vector=np.array([1.0, 2.0]),
-        dataset_array=np.array([[0.1, 0.2], [0.5, 0.6], [1.8, 0.9]]),
+        dataset_array=np.array([[1.0, 2.0], [1.01, 2.01], [0.0, 2.0]]),
     )
