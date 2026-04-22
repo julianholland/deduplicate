@@ -40,7 +40,7 @@ load your data into python
 from deduplicate_lib.plugins.deduplication_algorithms.multi_hash import MultiHash
 
 # define your paramerters in the MultiHash object
-dda=MultiHash(dataset_array=your_data_array)
+dda=MultiHash(dataset_array=your_data_numpy_array)
 
 # return a list of all unique values
 print(dda.deduplicate())
@@ -114,6 +114,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - The Fritz Haber Institute
 - Juan Manuel Lombardi <3
+- Maximillion Ach
+- Chiara Panosetti
 
 
 ## Project Links
@@ -123,9 +125,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Project To-Do
 
 - [x] Add example.ipynb
-- [ ] Create general Pre-allocation protocal
+- [x] Create general Pre-allocation protocal
 - [ ] Add benchmarks for time and robustness
 - [ ] Add Locality-Sensitive Hashing as an option
 - [x] Speedup slow tasks with Numba
 - [ ] Set up Read the Docs
 - [x] Create general deduplicate function
+- [ ] Speed up NTPP

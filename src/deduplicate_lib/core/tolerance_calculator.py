@@ -20,6 +20,7 @@ class ToleranceCalculator(ABC):
         self.perturbation_scale = perturbation_scale
         self.binary_search_steps = binary_search_steps
 
+
     @contextmanager
     def temp_attr(self, obj, attr, value):
         original = getattr(obj, attr)
@@ -51,38 +52,41 @@ class ToleranceCalculator(ABC):
             return tolerance
         
         # temporarily set the dataset_array to the tolerance_dataset_array for the duration of the search
-        with self.temp_attr(
-            self.duplicate_detection_algorithm_object,
-            "dataset_array",
-            self.tolerance_dataset_array,
-        ):
-            for _ in range(self.binary_search_steps):
-                # temporarily set the tolerance for the duration of this iteration of the search
-                with self.temp_attr(
-                    self.duplicate_detection_algorithm_object, "tolerance", tolerance
-                ):
+        old_array=self.duplicate_detection_algorithm_object.get_filled_dataset_array()
+        old_vector_count=self.duplicate_detection_algorithm_object.vector_count
+        self.duplicate_detection_algorithm_object.set_dataset_array(self.tolerance_dataset_array)
+        self.duplicate_detection_algorithm_object.pre_dda_processing()
+        
+        for _ in range(self.binary_search_steps):
+            # temporarily set the tolerance for the duration of this iteration of the search
+            with self.temp_attr(
+                self.duplicate_detection_algorithm_object, "tolerance", tolerance
+            ):
+                
+                unique_vectors = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
+            
+            results_dict[tolerance] = unique_vectors
+            if unique_vectors < target_unique_vectors: # loosen tolerance
+                best_max = tolerance
+            elif unique_vectors > target_unique_vectors: # tighten tolerance
+                best_min = tolerance
+
+            else:
+                exact_list.append(tolerance)
+                if (
+                    target_unique_vectors
+                    == self.duplicate_detection_algorithm_object.vector_count
                     
-                    unique_vectors = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-                results_dict[tolerance] = unique_vectors
-                if unique_vectors < target_unique_vectors: # loosen tolerance
-                    best_max = tolerance
-                elif unique_vectors > target_unique_vectors: # tighten tolerance
+                    or find_largest_tolerance_for_target
+                ):
                     best_min = tolerance
-
                 else:
-                    exact_list.append(tolerance)
-                    if (
-                        target_unique_vectors
-                        == len(
-                            self.duplicate_detection_algorithm_object.dataset_array
-                        )
-                        or find_largest_tolerance_for_target
-                    ):
-                        best_min = tolerance
-                    else:
-                        best_max = tolerance
-
-                tolerance = (best_min + best_max) / 2
+                    best_max = tolerance
+            tolerance = (best_min + best_max) / 2
+        
+        # reset the dataset_array to the original dataset array after the search is complete
+        self.duplicate_detection_algorithm_object.set_dataset_array(old_array)
+        self.duplicate_detection_algorithm_object.vector_count = old_vector_count
         # Find the best exact value if it exists, otherwise find the closest value
         if len(exact_list) > 0:
             if find_largest_tolerance_for_target:
@@ -107,21 +111,21 @@ class ToleranceCalculator(ABC):
         rng=np.random.default_rng(seed)
         self.tolerance_dataset_array = np.zeros(
             (
-                len(self.duplicate_detection_algorithm_object.dataset_array)
+                self.duplicate_detection_algorithm_object.vector_count
                 * self.perturbations_per_vector,
                 self.duplicate_detection_algorithm_object.dataset_array.shape[1],
             )
         )
 
-        for i, vector in enumerate(self.duplicate_detection_algorithm_object.dataset_array):
+        for i in range(self.duplicate_detection_algorithm_object.vector_count):
             self.tolerance_dataset_array[i * self.perturbations_per_vector] = (
                 self.duplicate_detection_algorithm_object.dataset_array[i]
             )
             for j in range(1, self.perturbations_per_vector):
                 perturbation = rng.normal(
-                    loc=0.0, scale=self.perturbation_scale, size=vector.shape
+                    loc=0.0, scale=self.perturbation_scale, size=self.duplicate_detection_algorithm_object.dataset_array.shape[1]
                 )
-                perturbed_vector = vector + perturbation
+                perturbed_vector = self.duplicate_detection_algorithm_object.dataset_array[i] + perturbation
                 self.tolerance_dataset_array[i * self.perturbations_per_vector + j] = (
                     perturbed_vector
                 )
@@ -129,7 +133,7 @@ class ToleranceCalculator(ABC):
     def _ensure_perturbed_dataset(self):
         if (
             self.tolerance_dataset_array.shape[0]
-            != len(self.duplicate_detection_algorithm_object.dataset_array)
+            != self.duplicate_detection_algorithm_object.vector_count
             * self.perturbations_per_vector and self.perturbations_per_vector > 1
         ):
             warnings.warn(

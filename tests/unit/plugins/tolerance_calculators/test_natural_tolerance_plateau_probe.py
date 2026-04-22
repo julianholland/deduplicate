@@ -99,36 +99,20 @@ def test_calculate_tolerance(request, dda_fixture):
     low_dataset=rng.uniform(low=0.0, high=0.3, size=(int(100-x_dupes/2), 200))
     high_dataset=rng.uniform(low=0.7, high=1.0, size=(int(100-x_dupes/2), 200))
     mid_dataset=rng.normal(loc=0.5, scale=0.001, size=(x_dupes, 200))
-    tc.duplicate_detection_algorithm_object.dataset_array=np.vstack([low_dataset, high_dataset, mid_dataset])
-    # tc.tolerance_dataset_array=
+    tc.duplicate_detection_algorithm_object.set_dataset_array(np.vstack([low_dataset, high_dataset, mid_dataset]))
+    tc.duplicate_detection_algorithm_object.input_vector = np.zeros(200)
 
-    # generate rattled data and compute distance matrix
     tc.create_perturbed_dataset()
-    with tc.temp_attr(
-        tc.duplicate_detection_algorithm_object,
-        "dataset_array",
-        tc.tolerance_dataset_array,
-    ):
-        tc.duplicate_detection_algorithm_object.pre_dda_processing(
-            tc.tolerance_dataset_array
-        )
-
-    # tc.tolerance_probe()
-    # use these to calculate the tolerance
-    # tc.binary_search_steps=
+    tc.duplicate_detection_algorithm_object.set_dataset_array(tc.tolerance_dataset_array)
     tolerance = tc.calculate_tolerance()
 
     assert isinstance(tolerance, float)
     assert tolerance > 0.0
     tc.duplicate_detection_algorithm_object.tolerance = tolerance
-    with tc.temp_attr(
-        tc.duplicate_detection_algorithm_object,
-        "dataset_array",
-        tc.tolerance_dataset_array,
-    ):
-        unique_vectors = (
-            tc.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-        )
+
+    unique_vectors = (
+        tc.duplicate_detection_algorithm_object.get_dataset_unique_structures()
+    )
     assert unique_vectors > 0 and unique_vectors <= len(tc.tolerance_dataset_array)
     
     

@@ -29,23 +29,26 @@ data = np.vstack([original_data_point, perturbed_data])
 )
 def test_pdr_with_dda(request, dda_fixture):
     dda = request.getfixturevalue(dda_fixture[0])
-    dda.dataset_array = data
-
+    dda.set_dataset_array(data)
+    dda.input_vector = np.array([])
+    print(dda.dataset_array.shape)
+    print(dda.vector_count)
     tc = PerturbedDatasetReclustering(
         duplicate_detection_algorithm_object=dda,
         perturbations_per_vector=10,
         perturbation_scale=0.01,
         binary_search_steps=30,
     )
+    print('pre perturbed dataset creation:', tc.tolerance_dataset_array.shape, tc.duplicate_detection_algorithm_object.dataset_array.shape, tc.duplicate_detection_algorithm_object.vector_count)
     tc.create_perturbed_dataset()
-    tc.duplicate_detection_algorithm_object.pre_dda_processing(tc.tolerance_dataset_array)
+    print('post perturbed dataset creation:', tc.tolerance_dataset_array.shape, tc.duplicate_detection_algorithm_object.dataset_array.shape, tc.duplicate_detection_algorithm_object.vector_count)
+    
     tolerance = tc.calculate_tolerance()
     print(tolerance)
-    # assert False
+    
     assert isinstance(tolerance, float)
     assert tolerance > 0.0
     assert np.isclose(tolerance, dda_fixture[1], atol=0.05 * dda_fixture[1])
-
 
 @pytest.mark.parametrize(
     "dda_fixture,tolerance_result_fixture",
@@ -56,7 +59,9 @@ def test_pdr_with_dda(request, dda_fixture):
 )
 def test_ntpp_with_dda(request, dda_fixture, tolerance_result_fixture):
     dda = request.getfixturevalue(dda_fixture)
-    dda.dataset_array = data
+    dda.set_dataset_array(data)
+    dda.input_vector = np.array([])
+    
 
     tc = NaturalTolerancePlateauProbe(
         duplicate_detection_algorithm_object=dda,
@@ -67,7 +72,6 @@ def test_ntpp_with_dda(request, dda_fixture, tolerance_result_fixture):
     )
     
     tc.create_perturbed_dataset()
-    tc.duplicate_detection_algorithm_object.pre_dda_processing(tc.tolerance_dataset_array)
     tolerance = tc.calculate_tolerance()
     print(tolerance)
     # assert False

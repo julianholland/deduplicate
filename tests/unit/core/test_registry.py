@@ -2,6 +2,7 @@
 import pytest
 from deduplicate_lib.core.plugin_registry import register_plugin, create_plugin, get_plugin_class
 from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
+import numpy as np
 
 def test_register_and_retrieve():
     @register_plugin("duplicate_detection_algorithm", "test_dummy")
@@ -15,8 +16,8 @@ def test_register_and_retrieve():
 def test_create_plugin():
     kwargs_dict = {
         "tolerance": 0.1,
-        "input_vector": [1.0, 2.0],
-        "dataset_array": [[1.0, 2.0]],
+        "input_vector": np.array([1.0, 2.0]),
+        "dataset_array": np.array([[1.0, 2.0]]),
     }
     instance = create_plugin("duplicate_detection_algorithm", "test_dummy", **kwargs_dict)
     assert isinstance(instance, DuplicateDetectionAlgorithm)

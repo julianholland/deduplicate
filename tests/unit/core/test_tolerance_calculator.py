@@ -5,7 +5,7 @@ from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
 
 def test_cannot_instantiate_abc():
     with pytest.raises(TypeError):
-        ToleranceCalculator()
+        ToleranceCalculator() # type: ignore
 
 
 def test_calculate_tolerance(dummy_tolerance_calculator):
@@ -20,9 +20,7 @@ def test_create_perturbed_dataset(dummy_tolerance_calculator):
         dummy_tolerance_calculator.create_perturbed_dataset(seed=seed)
         assert (
             dummy_tolerance_calculator.tolerance_dataset_array.shape[0]
-            == dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape[
-                0
-            ]
+            == dummy_tolerance_calculator.duplicate_detection_algorithm_object.vector_count
             * dummy_tolerance_calculator.perturbations_per_vector
         )
         assert (
@@ -31,11 +29,11 @@ def test_create_perturbed_dataset(dummy_tolerance_calculator):
                 1
             ]
         )
-
+        print(dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape)
         std_dev_of_perturbations = np.std(
             dummy_tolerance_calculator.tolerance_dataset_array
             - np.repeat(
-                dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array,
+                dummy_tolerance_calculator.duplicate_detection_algorithm_object.get_filled_dataset_array(),
                 dummy_tolerance_calculator.perturbations_per_vector,
                 axis=0,
             ),
@@ -48,7 +46,7 @@ def test_create_perturbed_dataset(dummy_tolerance_calculator):
             atol=0.05 * dummy_tolerance_calculator.perturbation_scale,
         ), f" {std_dev_of_perturbations} too different for seed {seed}"
 
-        original = dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array
+        original = dummy_tolerance_calculator.duplicate_detection_algorithm_object.get_filled_dataset_array()
         perturbed = dummy_tolerance_calculator.tolerance_dataset_array
         for i in range(original.shape[0]):
             assert np.allclose(
@@ -65,7 +63,7 @@ def test_ensure_perturbed_dataset(dummy_tolerance_calculator):
     dummy_tolerance_calculator.create_perturbed_dataset(seed=803)
     dummy_tolerance_calculator._ensure_perturbed_dataset()
     correct_shape = (
-        dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape[
+        dummy_tolerance_calculator.duplicate_detection_algorithm_object.get_filled_dataset_array().shape[
             0
         ]
         * dummy_tolerance_calculator.perturbations_per_vector,

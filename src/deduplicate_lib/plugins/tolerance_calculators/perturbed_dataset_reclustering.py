@@ -29,8 +29,8 @@ class PerturbedDatasetReclustering(ToleranceCalculator):
         perturbations_per_vector: int = 1,
         perturbation_scale: float = 0.1,
         binary_search_steps: int = 20,
-        target_structures: int | None = None,
-        target_structures_threshold: str = "average"
+        target_unique_vectors: int | None = None,
+        target_unique_vectors_threshold: str = "average"
     ):
 
         super().__init__(
@@ -40,10 +40,13 @@ class PerturbedDatasetReclustering(ToleranceCalculator):
             perturbation_scale=perturbation_scale,
             binary_search_steps=binary_search_steps,
         )
-        if target_structures is None:
-            target_structures = len(duplicate_detection_algorithm_object.dataset_array)
-        self.target_structures = target_structures
-        self.target_structures_threshold = target_structures_threshold
+
+        if target_unique_vectors is None:
+            self.target_unique_vectors = duplicate_detection_algorithm_object.vector_count
+        else:
+            self.target_unique_vectors = target_unique_vectors
+        
+        self.target_unique_vectors_threshold = target_unique_vectors_threshold
     def __str__(self) -> str:
         return f"PerturbedDatasetReclustering(perturbations_per_vector={self.perturbations_per_vector}, perturbation_scale={self.perturbation_scale}, dda={str(self.duplicate_detection_algorithm_object).split('(')[0]})"
     
@@ -54,26 +57,26 @@ class PerturbedDatasetReclustering(ToleranceCalculator):
             float: The calculated tolerance value.
         """
         self._ensure_perturbed_dataset()
-        if self.target_structures_threshold == "average":        
+        if self.target_unique_vectors_threshold == "average":        
             low_tolerance = self.binary_search_tolerance(
-                target_unique_vectors=self.target_structures,
+                target_unique_vectors=self.target_unique_vectors,
                 find_largest_tolerance_for_target=False,
             )
             high_tolerance = self.binary_search_tolerance(
-                target_unique_vectors=self.target_structures,
+                target_unique_vectors=self.target_unique_vectors,
                 find_largest_tolerance_for_target=True,
             )
             return (low_tolerance + high_tolerance) / 2
         
-        elif self.target_structures_threshold == "loose":
+        elif self.target_unique_vectors_threshold == "loose":
             return self.binary_search_tolerance(
-                target_unique_vectors=self.target_structures,
+                target_unique_vectors=self.target_unique_vectors,
                 find_largest_tolerance_for_target=True,
             )
-        elif self.target_structures_threshold == "tight":
+        elif self.target_unique_vectors_threshold == "tight":
             return self.binary_search_tolerance(
-                target_unique_vectors=self.target_structures,
+                target_unique_vectors=self.target_unique_vectors,
                 find_largest_tolerance_for_target=False,
             )
         else:
-            raise ValueError(f"Invalid target_structures_threshold: {self.target_structures_threshold}. Must be 'average', 'loose', or 'tight'.")
+            raise ValueError(f"Invalid target_unique_vectors_threshold: {self.target_unique_vectors_threshold}. Must be 'average', 'loose', or 'tight'.")

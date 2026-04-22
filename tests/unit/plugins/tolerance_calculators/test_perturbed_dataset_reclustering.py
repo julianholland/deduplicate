@@ -27,97 +27,72 @@ def test_calculate_tolerance(request, dda_fixture):
     dda = request.getfixturevalue(dda_fixture)
 
     # create perturbed dataset reclustering tolerance calculator with distance matrix dda
+    def pdr_with_threshold_type(threshold_type):
+        tc = PerturbedDatasetReclustering(
+            duplicate_detection_algorithm_object=dda,
+            perturbations_per_vector=100,
+            perturbation_scale=0.01,
+            binary_search_steps=20,
+            target_unique_vectors_threshold=threshold_type,
+        )
+
+        # generate rattled data and compute distance matrix
+        tc.create_perturbed_dataset()
+    
+        # use these to calculate the tolerance
+        tolerance = tc.calculate_tolerance()
+        print(f"Calculated {threshold_type} tolerance: {tolerance}")
+        # ensure the tolerance is a positive float and that it yields the correct number of unique vectors in the original dataset when applied to the perturbed dataset
+        assert isinstance(tolerance, float)
+        assert tolerance > 0.0
+        tc.duplicate_detection_algorithm_object.tolerance = tolerance
+        old_dataset_array = tc.duplicate_detection_algorithm_object.get_filled_dataset_array()
+        tc.duplicate_detection_algorithm_object.set_dataset_array(tc.tolerance_dataset_array)
+        unique_vectors = (
+            tc.duplicate_detection_algorithm_object.get_dataset_unique_structures()
+        )
+        tc.duplicate_detection_algorithm_object.set_dataset_array(old_dataset_array)
+        assert unique_vectors == len(tc.duplicate_detection_algorithm_object.get_filled_dataset_array())
+
+        return tolerance
+
+    average_tolerance = pdr_with_threshold_type("average")
+    loose_tolerance = pdr_with_threshold_type("loose")
+    tight_tolerance = pdr_with_threshold_type("tight")
+
+    assert loose_tolerance > average_tolerance
+    assert tight_tolerance < average_tolerance
+    assert tight_tolerance < loose_tolerance
+
+def test_initialize_with_target_unique_vectors(distance_matrix_dda):
+    dda = distance_matrix_dda
+    target_unique_vectors = 2
     tc = PerturbedDatasetReclustering(
         duplicate_detection_algorithm_object=dda,
         perturbations_per_vector=100,
         perturbation_scale=0.01,
         binary_search_steps=20,
+        target_unique_vectors=target_unique_vectors,
     )
+    assert tc.target_unique_vectors == target_unique_vectors
 
-    # generate rattled data and compute distance matrix
+@pytest.mark.parametrize(
+    "dda_fixture",
+    ["distance_matrix_dda", "multi_hashing_dda"]
+)
+def test_calculate_tolerance_with_insufficient_binary_search_steps(request, dda_fixture):
+    # create distance matrix dda
+    dda = request.getfixturevalue(dda_fixture)
+
+    # create perturbed dataset reclustering tolerance calculator with distance matrix dda
+    tc = PerturbedDatasetReclustering(
+        duplicate_detection_algorithm_object=dda,
+        perturbations_per_vector=100,
+        perturbation_scale=0.01,
+        binary_search_steps=1,
+    )
     tc.create_perturbed_dataset()
-    tc.duplicate_detection_algorithm_object.pre_dda_processing(tc.tolerance_dataset_array)
 
-    # use these to calculate the tolerance
-    tolerance = tc.calculate_tolerance()
-    print(f"Calculated Average Tolerance: {tolerance}")
-    # ensure the tolerance is a positive float and that it yields the correct number of unique vectors in the original dataset when applied to the perturbed dataset
-    assert isinstance(tolerance, float)
-    assert tolerance > 0.0
-    tc.duplicate_detection_algorithm_object.tolerance = tolerance
-    with tc.temp_attr(
-        tc.duplicate_detection_algorithm_object,
-        "dataset_array",
-        tc.tolerance_dataset_array,
-    ):
-        unique_vectors = (
-            tc.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-        )
-    assert unique_vectors == len(tc.duplicate_detection_algorithm_object.dataset_array)
-
-    # repeat for loose tolerance
-    tc_loose = PerturbedDatasetReclustering(
-        duplicate_detection_algorithm_object=dda,
-        perturbations_per_vector=100,
-        perturbation_scale=0.01,
-        binary_search_steps=20,
-        target_structures_threshold="loose",
-    )
-    tc_loose.create_perturbed_dataset()
-    tc_loose.duplicate_detection_algorithm_object.pre_dda_processing(tc_loose.tolerance_dataset_array)
-    
-
-    # use these to calculate the tolerance
-    loose_tolerance = tc_loose.calculate_tolerance()
-    print(f"Calculated Loose Tolerance: {loose_tolerance}")
-
-    assert isinstance(loose_tolerance, float)
-    assert loose_tolerance > 0.0
-    tc_loose.duplicate_detection_algorithm_object.tolerance = loose_tolerance
-    with tc_loose.temp_attr(
-        tc_loose.duplicate_detection_algorithm_object,
-        "dataset_array",
-        tc_loose.tolerance_dataset_array,
-    ):
-        unique_vectors = (
-            tc_loose.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-        )
-    assert unique_vectors == len(tc_loose.duplicate_detection_algorithm_object.dataset_array)
-
-    assert loose_tolerance >= tolerance
-
-    # repeat for tight tolerance
-    tc_tight = PerturbedDatasetReclustering(
-        duplicate_detection_algorithm_object=dda,
-        perturbations_per_vector=100,
-        perturbation_scale=0.01,
-        binary_search_steps=20,
-        target_structures_threshold="tight",
-    )
-    tc_tight.create_perturbed_dataset()
-    tc_tight.duplicate_detection_algorithm_object.pre_dda_processing(tc_tight.tolerance_dataset_array)
-    
-
-    # use these to calculate the tolerance
-    tight_tolerance = tc_tight.calculate_tolerance()
-    print(f"Calculated Tight Tolerance: {tight_tolerance}")
-    assert isinstance(tight_tolerance, float)
-    assert tight_tolerance > 0.0
-    tc_tight.duplicate_detection_algorithm_object.tolerance = tight_tolerance
-    with tc_tight.temp_attr(
-        tc_tight.duplicate_detection_algorithm_object,
-        "dataset_array",
-        tc_tight.tolerance_dataset_array,
-    ):
-        unique_vectors = (
-            tc_tight.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-        )
-    assert unique_vectors == len(tc_tight.duplicate_detection_algorithm_object.dataset_array)
-
-    assert tight_tolerance <= tolerance
-    assert tight_tolerance <= loose_tolerance
-
-    tc.binary_search_steps = 1
     original_best_max = (
         np.ptp(tc.tolerance_dataset_array)
         + np.mean(np.std(tc.tolerance_dataset_array, axis=0))
@@ -126,17 +101,17 @@ def test_calculate_tolerance(request, dda_fixture):
     with pytest.warns(
         UserWarning,
         match=(
-            rf"No exact tolerance found for target of {len(dda.dataset_array)} unique vectors during binary search\.\n"
+            rf"No exact tolerance found for target of {len(dda.get_filled_dataset_array())} unique vectors during binary search\.\n"
             rf" Returning closest tolerance found: {re.escape(str(original_best_max))} with \d+ unique vectors\."
         ),
     ):
-        tolerance = tc.calculate_tolerance()
+        print(tc.calculate_tolerance())
    
 
-def test_calculate_tolerance_raises_for_invalid_target_structures_threshold(distance_matrix_dda, monkeypatch):
+def test_calculate_tolerance_raises_for_invalid_target_unique_vectors_threshold(distance_matrix_dda, monkeypatch):
     tc = PerturbedDatasetReclustering(
         duplicate_detection_algorithm_object=distance_matrix_dda,
-        target_structures_threshold="invalid_mode",
+        target_unique_vectors_threshold="invalid_mode",
     )
 
     # Avoid unrelated setup behavior; we only want to test the threshold validation branch
@@ -144,6 +119,6 @@ def test_calculate_tolerance_raises_for_invalid_target_structures_threshold(dist
 
     with pytest.raises(
         ValueError,
-        match=r"Invalid target_structures_threshold: invalid_mode\. Must be 'average', 'loose', or 'tight'\.",
+        match=r"Invalid target_unique_vectors_threshold: invalid_mode\. Must be 'average', 'loose', or 'tight'\.",
     ):
         tc.calculate_tolerance()

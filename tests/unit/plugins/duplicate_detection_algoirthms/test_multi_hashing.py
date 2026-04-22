@@ -41,30 +41,31 @@ def test_round_to_tolerance(multi_hashing_dda):
     rounded_vector = dda.round_to_tolerance()
     assert np.allclose(rounded_vector, np.array([1.0, 2.0]))
 
-def test_create_hash_vector_array(multi_hashing_dda):
+def test_compute_hash_vector_array(multi_hashing_dda):
     dda = multi_hashing_dda
     dda.set_perturbation_array()  
-    hash_vector_array = dda.create_hash_vector_array()
-    assert hash_vector_array.shape == (3, dda.perturbations)
+    hash_vector_array = dda.compute_hash_vector_array()
+    assert hash_vector_array.shape == (dda.max_vector_array_size, dda.perturbations)
+    assert dda.get_filled_hash_vector_array().shape == (3, dda.perturbations)
 
-def test_create_hash_vector_without_setting_perturbation_array(multi_hashing_dda):
+def test_compute_hash_vector_without_setting_perturbation_array(multi_hashing_dda):
     dda = multi_hashing_dda
     with pytest.warns(UserWarning, match="Perturbation array shape does not match expected number of perturbations; recomputing. \nAssign the perturbation array prior duplication checks to avoid this warning."):
-        hash_vector_array = dda.create_hash_vector_array()
-    assert hash_vector_array.shape == (3, dda.perturbations)
+        dda.compute_hash_vector_array()
+    assert dda.get_filled_hash_vector_array().shape == (3, dda.perturbations)
 
-def test_create_hash_vector_array_consistency(multi_hashing_dda):
+def test_compute_hash_vector_array_consistency(multi_hashing_dda):
     dda1 = multi_hashing_dda
     dda1.set_perturbation_array()
-    hash_vector_array = dda1.create_hash_vector_array()
-    assert hash_vector_array.shape == (3, dda1.perturbations)
+    dda1.compute_hash_vector_array()
+    assert dda1.get_filled_hash_vector_array().shape == (3, dda1.perturbations)
 
     dda2 = copy.copy(dda1)
-    hash_vector_array_1 = dda1.create_hash_vector_array()
-    hash_vector_array_2 = dda2.create_hash_vector_array()
+    hash_vector_array_1 = dda1.compute_hash_vector_array()
+    hash_vector_array_2 = dda2.compute_hash_vector_array()
     assert np.array_equal(hash_vector_array_1, hash_vector_array_2)
 
-def test_create_hash_vector_array_different_seeds(multi_hashing_dda):
+def test_compute_hash_vector_array_different_seeds(multi_hashing_dda):
     dda1 = copy.copy(multi_hashing_dda)
     dda1.seed = 803
     dda1.set_perturbation_array()  
@@ -73,12 +74,12 @@ def test_create_hash_vector_array_different_seeds(multi_hashing_dda):
     dda2.seed = 8  # different seed
     dda2.set_perturbation_array()
     
-    hash_vector_array_1 = dda1.create_hash_vector_array()
-    hash_vector_array_2 = dda2.create_hash_vector_array()
+    hash_vector_array_1 = dda1.compute_hash_vector_array()
+    hash_vector_array_2 = dda2.compute_hash_vector_array()
 
     assert not np.array_equal(hash_vector_array_1, hash_vector_array_2)
 
-def test_create_hash_vector_array_different_perturbations(multi_hashing_dda):
+def test_compute_hash_vector_array_different_perturbations(multi_hashing_dda):
     dda1 = copy.copy(multi_hashing_dda)
     dda1.perturbations = 200
     dda1.set_perturbation_array()
@@ -87,13 +88,13 @@ def test_create_hash_vector_array_different_perturbations(multi_hashing_dda):
     dda2.perturbations = 300 # different number of perturbations
     dda2.set_perturbation_array()
 
-    hash_vector_array_1 = dda1.create_hash_vector_array()
-    hash_vector_array_2 = dda2.create_hash_vector_array()
+    hash_vector_array_1 = dda1.compute_hash_vector_array()
+    hash_vector_array_2 = dda2.compute_hash_vector_array()
 
     assert hash_vector_array_1.shape[1] == 200
     assert hash_vector_array_2.shape[1] == 300
 
-def test_create_hash_vector_array_different_input_vectors(multi_hashing_dda):
+def test_compute_hash_vector_array_different_input_vectors(multi_hashing_dda):
     # should not effect the hash vector array as only the dataset vectors are used to create the hash vector array, not the input vector
     dda1 = copy.copy(multi_hashing_dda)
     dda1.set_perturbation_array()
@@ -102,29 +103,36 @@ def test_create_hash_vector_array_different_input_vectors(multi_hashing_dda):
     dda2.input_vector = np.array([10.0, 20.0])
     dda2.set_perturbation_array()
 
-    hash_vector_array_1 = dda1.create_hash_vector_array()
-    hash_vector_array_2 = dda2.create_hash_vector_array()
+    hash_vector_array_1 = dda1.compute_hash_vector_array()
+    hash_vector_array_2 = dda2.compute_hash_vector_array()
 
     assert np.array_equal(hash_vector_array_1, hash_vector_array_2)
 
-def test_create_hash_vector_array_different_dataset_arrays(multi_hashing_dda):
+def test_compute_hash_vector_array_different_dataset_arrays(multi_hashing_dda):
     dda1 = copy.copy(multi_hashing_dda)
     dda1.set_perturbation_array()
 
     dda2 = copy.copy(multi_hashing_dda)
-    dda2.dataset_array = np.array([[10.0, 20.0], [11.0, 21.0], [9.0, 19.0]])
+    dda2.set_dataset_array(np.array([[10.0, 20.0], [11.0, 21.0], [9.0, 19.0]]))
     dda2.set_perturbation_array()
 
-    hash_vector_array_1 = dda1.create_hash_vector_array()
-    hash_vector_array_2 = dda2.create_hash_vector_array()
+    hash_vector_array_1 = dda1.compute_hash_vector_array()
+    hash_vector_array_2 = dda2.compute_hash_vector_array()
 
     assert not np.array_equal(hash_vector_array_1, hash_vector_array_2)
+
+def test_initialize_hash_vector_array(multi_hashing_dda):
+    dda = multi_hashing_dda
+    dda.set_perturbation_array()  
+    dda.initialize_hash_vector_array()
+    assert dda.hash_vector_array.shape == (dda.max_vector_array_size, dda.perturbations)
+    assert np.all(dda.hash_vector_array == 0)
 
 def test_duplicate_check(multi_hashing_dda):
     dda = multi_hashing_dda
 
     dda.set_perturbation_array()  # Ensure perturbation array is set before duplication check
-    dda.create_hash_vector_array()  # Ensure hash vector array is created before duplication check
+    dda.compute_hash_vector_array()  # Ensure hash vector array is created before duplication check
     assert dda.duplicate_check()
 
     dda.input_vector = np.array([16.0, 200.0])
@@ -165,10 +173,10 @@ def test_set_acceptance_threshold_warning(multi_hashing_dda):
 def test_get_dataset_unique_structures(multi_hashing_dda):
     dda = multi_hashing_dda
     dda.perturbations = 5
-    dda.dataset_array = np.array([[1.0, 2.0], [1.001, 2.001], [10.0, 20.0]])
+    dda.set_dataset_array(np.array([[1.0, 2.0], [1.001, 2.001], [10.0, 20.0]]))
 
     dda.set_perturbation_array()  
-    dda.create_hash_vector_array()
+    dda.compute_hash_vector_array()
     unique_count = dda.get_dataset_unique_structures()
     assert unique_count == 2
 
@@ -176,7 +184,7 @@ def test_distance_matrix_computation_with_hash_vector_array(multi_hashing_dda):
     dda = multi_hashing_dda
     dda.perturbations = 5
     dda.set_perturbation_array()  
-    dda.create_hash_vector_array()
+    dda.compute_hash_vector_array()
     dda.compute_distance_matrix(dda.hash_vector_array)
 
 def test_pre_dda_processing(multi_hashing_dda):
@@ -186,18 +194,18 @@ def test_pre_dda_processing(multi_hashing_dda):
 
 def test_add_input_vector_to_dda(multi_hashing_dda):
     dda = multi_hashing_dda
-    initial_dataset_size = dda.dataset_array.shape[0]
+    initial_dataset_size = dda.get_filled_dataset_array().shape[0]
     dda.set_perturbation_array()  
-    dda.create_hash_vector_array()
+    dda.compute_hash_vector_array()
     dda.add_input_vector_to_dda()
-    assert dda.dataset_array.shape[0] == initial_dataset_size + 1
-    assert np.array_equal(dda.dataset_array[-1], dda.input_vector)
-    assert dda.hash_vector_array.shape[0] == initial_dataset_size + 1
+    assert dda.get_filled_dataset_array().shape[0] == initial_dataset_size + 1
+    assert np.array_equal(dda.get_filled_dataset_array()[-1], dda.input_vector)
+    assert dda.get_filled_hash_vector_array().shape[0] == initial_dataset_size + 1
 
 def test_get_uniqueness_score(multi_hashing_dda):
     dda = multi_hashing_dda
     dda.set_perturbation_array()
-    dda.create_hash_vector_array()
+    dda.compute_hash_vector_array()
     dda.input_vector = dda.dataset_array[0]  # identical to first dataset vector, should be classified as duplicate
     uniqueness_score=dda.get_uniqueness_score()
 

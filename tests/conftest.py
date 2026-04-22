@@ -29,6 +29,7 @@ dummy_dda_object = DummyDDA(
     tolerance=0.1,
     input_vector=np.array([1.0, 2.0]),
     dataset_array=np.array([[1.0, 2.0]]),
+    max_vector_array_size=10
 )
 
 
