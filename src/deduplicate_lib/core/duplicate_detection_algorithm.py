@@ -83,14 +83,18 @@ class DuplicateDetectionAlgorithm(ABC):
         self.max_vector_array_size = max_vector_array_size
 
         self.set_dataset_array(dataset_array) if dataset_array.size > 0 else None
-        self.preinitialize_dataset_array()
-    # In DuplicateDetectionAlgorithm
 
     @property
     def dataset_array(self) -> np.ndarray:
         view = self._dataset_array.view()
         view.flags.writeable = False
         return view
+    
+    @dataset_array.setter
+    def dataset_array(self, _value: np.ndarray) -> None:
+        raise AttributeError(
+            "Cannot assign to 'dataset_array' directly; use set_dataset_array(...)."
+        )
     
     def _set_dataset_array_internal(self, arr:np.ndarray) -> None:
         self._dataset_array = arr
@@ -112,10 +116,13 @@ class DuplicateDetectionAlgorithm(ABC):
     def calculate_distance(self, vector1: np.ndarray, vector2: np.ndarray) -> float:
         return self.distance_function(vector1, vector2)
 
-    def compute_distance_matrix(self, vector_array: np.ndarray) -> None:
+    def compute_distance_matrix(self, vector_array: np.ndarray | None = None) -> None:
         """Compute the distance matrix for the dataset from scratch."""
         if self.distance_matrix.size == 0:
             self.initialize_distance_matrix()
+
+        if vector_array is None:
+            vector_array = self._dataset_array
 
         self.distance_matrix[: self.vector_count, : self.vector_count] = fast_compute_distance_matrix(
             vector_array[: self.vector_count], self.distance_function
@@ -173,20 +180,32 @@ class DuplicateDetectionAlgorithm(ABC):
         return self.distance_matrix[: self.vector_count, : self.vector_count]
 
     def set_dataset_array(self, new_dataset_array: np.ndarray) -> None:
-        """Create new dataset array with correct shape and vector count"""
+        """Create new dataset array with correct shape and vector count
+        if the input vector and dataset are both empty then the vector length cannot be determined, so we initialize an empty dataset array"""
         if new_dataset_array.shape[0] > self.max_vector_array_size:
             raise ValueError("New dataset array size exceeds maximum allowed size.")
+        
         self.vector_count = new_dataset_array.shape[0]
-        self.initialize_dataset_array(new_dataset_array.shape[1])
-        
-        self._dataset_array[: self.vector_count] = new_dataset_array
-        
+        if new_dataset_array.size == 0 and self.input_vector.size > 0:
+            self.initialize_dataset_array(len(self.input_vector))
+        elif new_dataset_array.size > 0:         
+            self.initialize_dataset_array(new_dataset_array.shape[1])
+            self._dataset_array[: self.vector_count] = new_dataset_array
+        else:
+            self._dataset_array = new_dataset_array
     
-    def preinitialize_dataset_array(self) -> None:
+    def get_vector_length(self) -> int:
         has_input = self.input_vector.size > 0
         has_dataset = self._dataset_array.size > 0
-
-        if has_input:
+        print(f"has_input: {has_input}, has_dataset: {has_dataset}")
+        print(f"input_vector: {self.input_vector}, dataset_array: {self._dataset_array}")
+        
+        if has_input and has_dataset:
+            print(self.input_vector.shape, self._dataset_array.shape)
+            if self.input_vector.shape[0] != self._dataset_array.shape[1]:
+                raise ValueError(
+                    "Input vector length does not match dataset vector length."
+                )
             vector_length = self.input_vector.shape[0]
         elif has_dataset:
             vector_length = self._dataset_array.shape[1]
@@ -195,16 +214,14 @@ class DuplicateDetectionAlgorithm(ABC):
                 "Cannot determine vector length from input vector or dataset array. "
                 "Assign one of them before preinitialization."
             )
+        
+        return vector_length
 
-        if has_input and has_dataset and self._dataset_array.shape[1] != vector_length:
-            raise ValueError("Dataset array vector length does not match input vector length.")
+    def preinitialize_dataset_array(self) -> None:
+        vector_length=self.get_vector_length()
 
         if self._dataset_array.shape[0] > self.max_vector_array_size:
             raise ValueError("Dataset array size exceeds maximum allowed size.")
-
-        if not has_dataset:
-            self.initialize_dataset_array(vector_length)
-            return
 
         if self._dataset_array.shape[0] != self.max_vector_array_size:
             existing_data = self._dataset_array.copy()

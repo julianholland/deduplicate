@@ -103,15 +103,13 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             hash_vector[i] = hash(rounded_and_perturbed[i].tobytes())
         return hash_vector
 
-    def create_hash_vector_array(self) -> np.ndarray:
+    def compute_hash_vector_array(self) -> np.ndarray:
         """Creates the hash vector array for the dataset. Only unique hash values are stored for each perturbation.
 
         Returns:
             np.ndarray: A 2D array containing the hash values for each vector in the dataset for each perturbation.
         """
-        self.hash_vector_array = np.zeros(
-            (self.max_vector_array_size, self.perturbations), dtype=int
-        )
+        self.initialize_hash_vector_array()
         self._ensure_perturbation_array()
         for i in range(self.vector_count):
             hash_vector = self.create_hash_vector(self.dataset_array[i])
@@ -119,6 +117,9 @@ class MultiHashing(DuplicateDetectionAlgorithm):
                 if hash_vector[j] not in self.hash_vector_array[:, j]:
                     self.hash_vector_array[i, j] = hash_vector[j]
         return self.hash_vector_array
+    
+    def initialize_hash_vector_array(self) -> None:
+        self.hash_vector_array = np.zeros((self.max_vector_array_size, self.perturbations), dtype=int)
     
     def get_filled_hash_vector_array(self) -> np.ndarray:
         """Returns the filled portion of the hash vector array corresponding to the current dataset size."""
@@ -129,7 +130,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             warnings.warn(
                 "Hash vector array shape does not match dataset; recomputing."
             )
-            self.create_hash_vector_array()
+            self.compute_hash_vector_array()
 
     def duplicate_check(self) -> bool:
         """duplicate check against dataset using multi-hashing approach.
@@ -167,7 +168,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         Returns:
             int: The number of unique structures in the dataset.
         """
-        self.create_hash_vector_array()
+        self.compute_hash_vector_array()
         clash_array = np.zeros((self.hash_vector_array[: self.vector_count].shape), dtype=bool)
         clash_array[np.nonzero(self.hash_vector_array[: self.vector_count])] = True
         self.unique_vector_indices = np.sum(clash_array, axis=1) / self.perturbations >= self.acceptance_threshold
@@ -180,6 +181,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
 
     def add_input_vector_to_dda(self) -> None:
         """Add the input vector to the dataset array and update the hash vector array accordingly."""
+        self._ensure_hash_vector_array()
         self._dataset_array[self.vector_count] = self.input_vector
         new_hash_vector = self.create_hash_vector()
         self.hash_vector_array[self.vector_count] = new_hash_vector

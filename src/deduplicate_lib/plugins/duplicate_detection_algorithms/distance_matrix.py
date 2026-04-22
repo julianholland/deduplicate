@@ -1,7 +1,6 @@
 from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
 from deduplicate_lib.core.plugin_registry import register_plugin
 import numpy as np
-import warnings
 
 @register_plugin(kind="duplicate_detection_algorithm", name="distance_matrix")
 class DistanceMatrix(DuplicateDetectionAlgorithm):

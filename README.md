@@ -40,7 +40,7 @@ load your data into python
 from deduplicate_lib.plugins.deduplication_algorithms.multi_hash import MultiHash
 
 # define your paramerters in the MultiHash object
-dda=MultiHash(dataset_array=your_data_array)
+dda=MultiHash(dataset_array=your_data_numpy_array)
 
 # return a list of all unique values
 print(dda.deduplicate())
@@ -114,6 +114,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - The Fritz Haber Institute
 - Juan Manuel Lombardi <3
+- Maximillion Ach
+- Chiara Panosetti
 
 
 ## Project Links

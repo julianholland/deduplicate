@@ -64,6 +64,18 @@ def test_calculate_tolerance(request, dda_fixture):
     assert tight_tolerance < average_tolerance
     assert tight_tolerance < loose_tolerance
 
+def test_initialize_with_target_unique_vectors(distance_matrix_dda):
+    dda = distance_matrix_dda
+    target_unique_vectors = 2
+    tc = PerturbedDatasetReclustering(
+        duplicate_detection_algorithm_object=dda,
+        perturbations_per_vector=100,
+        perturbation_scale=0.01,
+        binary_search_steps=20,
+        target_unique_vectors=target_unique_vectors,
+    )
+    assert tc.target_unique_vectors == target_unique_vectors
+
 @pytest.mark.parametrize(
     "dda_fixture",
     ["distance_matrix_dda", "multi_hashing_dda"]
