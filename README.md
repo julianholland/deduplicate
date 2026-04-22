@@ -123,9 +123,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Project To-Do
 
 - [x] Add example.ipynb
-- [ ] Create general Pre-allocation protocal
+- [x] Create general Pre-allocation protocal
 - [ ] Add benchmarks for time and robustness
 - [ ] Add Locality-Sensitive Hashing as an option
 - [x] Speedup slow tasks with Numba
 - [ ] Set up Read the Docs
 - [x] Create general deduplicate function
+- [ ] Speed up NTPP

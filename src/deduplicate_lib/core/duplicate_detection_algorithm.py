@@ -71,15 +71,29 @@ class DuplicateDetectionAlgorithm(ABC):
         distance_matrix: np.ndarray = np.array([]),
         distance_metric: str = "euclidean",
         unique_vector_indices: np.ndarray = np.array([]),
+        max_vector_array_size: int = 10000,
     ) -> None:
         self.tolerance = tolerance
         self.input_vector = input_vector
-        self.dataset_array = dataset_array
+        self._dataset_array = np.array([])  # will be initialized properly in preinitialize_dataset_array
+        
         self.distance_matrix = distance_matrix
         self.distance_metric = distance_metric
         self.unique_vector_indices = unique_vector_indices
+        self.max_vector_array_size = max_vector_array_size
 
+        self.set_dataset_array(dataset_array) if dataset_array.size > 0 else None
+        self.preinitialize_dataset_array()
     # In DuplicateDetectionAlgorithm
+
+    @property
+    def dataset_array(self) -> np.ndarray:
+        view = self._dataset_array.view()
+        view.flags.writeable = False
+        return view
+    
+    def _set_dataset_array_internal(self, arr:np.ndarray) -> None:
+        self._dataset_array = arr
 
     @property
     def distance_metric(self):
@@ -100,8 +114,11 @@ class DuplicateDetectionAlgorithm(ABC):
 
     def compute_distance_matrix(self, vector_array: np.ndarray) -> None:
         """Compute the distance matrix for the dataset from scratch."""
-        self.distance_matrix = fast_compute_distance_matrix(
-            vector_array, self.distance_function
+        if self.distance_matrix.size == 0:
+            self.initialize_distance_matrix()
+
+        self.distance_matrix[: self.vector_count, : self.vector_count] = fast_compute_distance_matrix(
+            vector_array[: self.vector_count], self.distance_function
         )
 
     def get_new_distance_matrix_column(self, vector_array: np.ndarray) -> np.ndarray:
@@ -111,17 +128,15 @@ class DuplicateDetectionAlgorithm(ABC):
             np.ndarray: A 1D array containing the distances from the input vector to each vector in the dataset.
         """
         return fast_get_new_distance_matrix_column(
-            self.input_vector, vector_array, self.distance_function
+            self.input_vector, vector_array[: self.vector_count], self.distance_function
         )
 
     def add_new_vector_to_distance_matrix(self, vector_array: np.ndarray) -> None:
         """Add a new input vector to the distance matrix."""
         new_distances = self.get_new_distance_matrix_column(vector_array)
-        self.distance_matrix = np.hstack(
-            (self.distance_matrix, new_distances[:, np.newaxis])
-        )
-        new_row = np.append(new_distances, 0)  # Distance to itself is 0
-        self.distance_matrix = np.vstack((self.distance_matrix, new_row))
+        self.distance_matrix[self.vector_count] = np.pad(new_distances, (0, self.max_vector_array_size - len(new_distances)), constant_values=0)
+        self.distance_matrix[:, self.vector_count] = np.pad(new_distances, (0, self.max_vector_array_size - len(new_distances)), constant_values=0)
+        
 
     def pre_dda_processing(
         self, input_dataset_array: np.ndarray | None = None, *args, **kwargs
@@ -135,7 +150,7 @@ class DuplicateDetectionAlgorithm(ABC):
 
     def get_unique_vector_indices(self) -> np.ndarray:
         """Returns the indices of the unique vectors in the dataset."""
-        if self.unique_vector_indices.shape[0] != self.dataset_array.shape[0]:
+        if self.unique_vector_indices.shape[0] != self.vector_count:
             raise ValueError(
                 "Unique vector indices array shape does not match dataset; please run get_dataset_unique_structures() to update the unique vector indices before calling this method."
             )
@@ -144,6 +159,58 @@ class DuplicateDetectionAlgorithm(ABC):
     def deduplicate(self):
         """Finds all unique vectors in the dataset and returns them as a new array."""
         return self.dataset_array[self.get_unique_vector_indices()]
+    
+    def initialize_dataset_array(self, vector_length: int) -> None:
+        self._set_dataset_array_internal(np.zeros((self.max_vector_array_size, vector_length)))
+
+    def initialize_distance_matrix(self) -> None:
+        self.distance_matrix = np.zeros((self.max_vector_array_size, self.max_vector_array_size))
+    
+    def get_filled_dataset_array(self) -> np.ndarray:
+        return self._dataset_array[: self.vector_count]
+    
+    def get_filled_distance_matrix(self) -> np.ndarray:
+        return self.distance_matrix[: self.vector_count, : self.vector_count]
+
+    def set_dataset_array(self, new_dataset_array: np.ndarray) -> None:
+        """Create new dataset array with correct shape and vector count"""
+        if new_dataset_array.shape[0] > self.max_vector_array_size:
+            raise ValueError("New dataset array size exceeds maximum allowed size.")
+        self.vector_count = new_dataset_array.shape[0]
+        self.initialize_dataset_array(new_dataset_array.shape[1])
+        
+        self._dataset_array[: self.vector_count] = new_dataset_array
+        
+    
+    def preinitialize_dataset_array(self) -> None:
+        has_input = self.input_vector.size > 0
+        has_dataset = self._dataset_array.size > 0
+
+        if has_input:
+            vector_length = self.input_vector.shape[0]
+        elif has_dataset:
+            vector_length = self._dataset_array.shape[1]
+        else:
+            raise ValueError(
+                "Cannot determine vector length from input vector or dataset array. "
+                "Assign one of them before preinitialization."
+            )
+
+        if has_input and has_dataset and self._dataset_array.shape[1] != vector_length:
+            raise ValueError("Dataset array vector length does not match input vector length.")
+
+        if self._dataset_array.shape[0] > self.max_vector_array_size:
+            raise ValueError("Dataset array size exceeds maximum allowed size.")
+
+        if not has_dataset:
+            self.initialize_dataset_array(vector_length)
+            return
+
+        if self._dataset_array.shape[0] != self.max_vector_array_size:
+            existing_data = self._dataset_array.copy()
+            self.vector_count = existing_data.shape[0]
+            self.initialize_dataset_array(vector_length)
+            self._dataset_array[: self.vector_count] = existing_data
 
     @abstractmethod
     def duplicate_check(self) -> bool:

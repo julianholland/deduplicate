@@ -13,19 +13,14 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
         distance_matrix: np.ndarray = np.array([]),
         distance_metric: str = "euclidean",
         unique_vector_indices: np.ndarray = np.array([]),
+        max_vector_array_size: int = 10000,
     ) -> None:
         super().__init__(
-            tolerance, input_vector, dataset_array, distance_matrix, distance_metric, unique_vector_indices
+            tolerance, input_vector, dataset_array, distance_matrix, distance_metric, unique_vector_indices, max_vector_array_size
         )
 
     def __str__(self) -> str:
         return f"DistanceMatrix(tolerance={self.tolerance}, distance_metric={self.distance_metric})"
-
-    def _ensure_distance_matrix(self):
-        if self.distance_matrix.shape[0] != self.dataset_array.shape[0]:
-            warnings.warn("Distance matrix shape does not match dataset; recomputing.")
-            self.compute_distance_matrix(self.dataset_array)
-            
 
     def duplicate_check(self) -> bool:
         return bool(
@@ -35,22 +30,22 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
         )
 
     def get_dataset_unique_structures(self) -> int:
-        self._ensure_distance_matrix()
-        self.unique_vector_indices = np.zeros(self.dataset_array.shape[0], dtype=bool)
+        self.unique_vector_indices = np.zeros(self.vector_count, dtype=bool)
         self.unique_vector_indices[0] = True  # the first vector is always unique
-        for i in range(1, self.distance_matrix.shape[0]):
-            imask = np.arange(self.distance_matrix.shape[0]) != i
-            if np.all(self.distance_matrix[i][imask] >= self.tolerance):
+        for i in range(1, self.vector_count):
+            imask = np.arange(self.vector_count) != i
+            if np.all(self.distance_matrix[i, : self.vector_count][imask] >= self.tolerance):
                 self.unique_vector_indices[i] = True
         return np.sum(self.unique_vector_indices)
 
-    def pre_dda_processing(self, input_dataset_array: np.ndarray | None = None, *args, **kwargs) -> None:
-        if input_dataset_array is None:
-            input_dataset_array = self.dataset_array
-        self.compute_distance_matrix(input_dataset_array)
+    def pre_dda_processing(self, *args, **kwargs) -> None:
+        self.preinitialize_dataset_array()
+        self.initialize_distance_matrix()
+        self.compute_distance_matrix(self.dataset_array)
     
     def add_input_vector_to_dda(self) -> None:
         """Add the input vector to the dataset array and update the distance matrix accordingly."""
         self.add_new_vector_to_distance_matrix(self.dataset_array)
-        self.dataset_array = np.vstack((self.dataset_array, self.input_vector))
-
+        self._dataset_array[self.vector_count] = self.input_vector
+        self.vector_count += 1
+        

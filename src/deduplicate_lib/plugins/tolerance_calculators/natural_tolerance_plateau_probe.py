@@ -38,18 +38,20 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
         self, lower_tolerance: float, upper_tolerance: float, tolerance_steps: int
     ) -> dict:
         tolerance_results = {}
-        with self.temp_attr(
-            self.duplicate_detection_algorithm_object,
-            "dataset_array",
-            self.tolerance_dataset_array,
-        ):
-            for tol in np.linspace(lower_tolerance, upper_tolerance, tolerance_steps):
-                with self.temp_attr(
-                    self.duplicate_detection_algorithm_object, "tolerance", tol
-                ):
-                    self.duplicate_detection_algorithm_object.tolerance = tol
-                    unique_structures = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-                    tolerance_results[tol] = unique_structures
+        old_array=self.duplicate_detection_algorithm_object.get_filled_dataset_array()
+        old_vector_count=self.duplicate_detection_algorithm_object.vector_count
+
+        self.duplicate_detection_algorithm_object.set_dataset_array(self.tolerance_dataset_array)
+        
+        for tol in np.linspace(lower_tolerance, upper_tolerance, tolerance_steps):
+            with self.temp_attr(
+                self.duplicate_detection_algorithm_object, "tolerance", tol
+            ):
+                unique_structures = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
+                tolerance_results[tol] = unique_structures
+        
+        self.duplicate_detection_algorithm_object.set_dataset_array(old_array)
+        self.duplicate_detection_algorithm_object.vector_count = old_vector_count
         return tolerance_results
 
     def get_plateau_log(

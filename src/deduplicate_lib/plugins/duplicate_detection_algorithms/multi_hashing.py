@@ -39,6 +39,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         distance_matrix: np.ndarray = np.array([]),
         hash_vector_array: np.ndarray = np.array([]),
         unique_vector_indices: np.ndarray = np.array([]),
+        max_vector_array_size: int = 10000,
     ) -> None:
         super().__init__(
             tolerance=tolerance,
@@ -47,6 +48,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             distance_metric=distance_metric,
             distance_matrix=distance_matrix,
             unique_vector_indices=unique_vector_indices,
+            max_vector_array_size=max_vector_array_size
         )
         self.seed = seed
         self.sigma_accepatnce_threshold = sigma_accepatnce_threshold
@@ -108,15 +110,19 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             np.ndarray: A 2D array containing the hash values for each vector in the dataset for each perturbation.
         """
         self.hash_vector_array = np.zeros(
-            (self.dataset_array.shape[0], self.perturbations), dtype=int
+            (self.max_vector_array_size, self.perturbations), dtype=int
         )
         self._ensure_perturbation_array()
-        for i in range(self.dataset_array.shape[0]):
+        for i in range(self.vector_count):
             hash_vector = self.create_hash_vector(self.dataset_array[i])
             for j in range(self.perturbations):
                 if hash_vector[j] not in self.hash_vector_array[:, j]:
                     self.hash_vector_array[i, j] = hash_vector[j]
         return self.hash_vector_array
+    
+    def get_filled_hash_vector_array(self) -> np.ndarray:
+        """Returns the filled portion of the hash vector array corresponding to the current dataset size."""
+        return self.hash_vector_array[: self.vector_count]
 
     def _ensure_hash_vector_array(self):
         if self.hash_vector_array.shape[0] != self.dataset_array.shape[0]:
@@ -136,7 +142,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
 
         clash_vector = np.zeros(self.perturbations, dtype=bool)
         for hash_index, hash_value in enumerate(hash_vector):
-            if hash_value in self.hash_vector_array[:, hash_index]:
+            if hash_value in self.hash_vector_array[: self.vector_count, hash_index]:
                 clash_vector[hash_index] = True
         duplicate_vote_array = np.sum(clash_vector) / self.perturbations
 
@@ -149,7 +155,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         hash_vector = self.create_hash_vector()
         clash_vector = np.zeros(self.perturbations, dtype=bool)
         for hash_index, hash_value in enumerate(hash_vector):
-            if hash_value in self.hash_vector_array[:, hash_index]:
+            if hash_value in self.hash_vector_array[: self.vector_count, hash_index]:
                 clash_vector[hash_index] = True
         uniqueness_score = 1 - np.sum(clash_vector) / self.perturbations
 
@@ -162,17 +168,19 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             int: The number of unique structures in the dataset.
         """
         self.create_hash_vector_array()
-        clash_array = np.zeros((self.hash_vector_array.shape), dtype=bool)
-        clash_array[np.nonzero(self.hash_vector_array)] = True
+        clash_array = np.zeros((self.hash_vector_array[: self.vector_count].shape), dtype=bool)
+        clash_array[np.nonzero(self.hash_vector_array[: self.vector_count])] = True
         self.unique_vector_indices = np.sum(clash_array, axis=1) / self.perturbations >= self.acceptance_threshold
         
         return np.sum(self.unique_vector_indices)
     
     def pre_dda_processing(self, *args, **kwargs) -> None:
+        self.preinitialize_dataset_array()
         self.set_perturbation_array()
 
     def add_input_vector_to_dda(self) -> None:
         """Add the input vector to the dataset array and update the hash vector array accordingly."""
-        self.dataset_array = np.vstack((self.dataset_array, self.input_vector))
+        self._dataset_array[self.vector_count] = self.input_vector
         new_hash_vector = self.create_hash_vector()
-        self.hash_vector_array = np.vstack((self.hash_vector_array, new_hash_vector))
+        self.hash_vector_array[self.vector_count] = new_hash_vector
+        self.vector_count += 1
