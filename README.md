@@ -102,7 +102,7 @@ If you use deduplicate_lib in your research, please cite:
   author={Julian Holland},
   year={2026},
   url={https://github.com/julianholland/deduplicate},
-  version={0.0.2dev}
+  version={0.0.5}
 }
 ```
 
@@ -131,4 +131,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Speedup slow tasks with Numba
 - [ ] Set up Read the Docs
 - [x] Create general deduplicate function
-- [ ] Speed up NTPP
+- [x] Speed up NTPP

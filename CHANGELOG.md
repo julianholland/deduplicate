@@ -2,6 +2,18 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.5] - 2026-04-23
+
+### Changed
+- Reinstated dictionary-based storage in multi-hashing implementation (`b3f3fad`).
+- Verified full test and coverage status for the dictionary reversion (`b3f3fad`).
+- Finalized release/build readiness updates (`ff9ee21`, `02614ed`).
+
+### Merged
+- PR #9: Reinstate dictionaries for MH (`aa9aff4`).
+
+---
+
 ## [0.0.4] - 2026-04-22
 
 ### Added
