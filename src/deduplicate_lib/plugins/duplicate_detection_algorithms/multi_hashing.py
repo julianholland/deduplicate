@@ -37,7 +37,6 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         distance_metric: str = "hamming",
         sigma_accepatnce_threshold: int = 1,
         distance_matrix: np.ndarray = np.array([]),
-        hash_vector_array: np.ndarray = np.array([]),
         unique_vector_indices: np.ndarray = np.array([]),
         max_vector_array_size: int = 10000,
     ) -> None:
@@ -53,9 +52,9 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         self.seed = seed
         self.sigma_accepatnce_threshold = sigma_accepatnce_threshold
         self.perturbations = perturbations
-        self.hash_vector_array = hash_vector_array
         self.perturbation_array = pertrubation_array
-
+        
+        self.initialize_hash_vector_dictionary()
         self.set_acceptance_threshold()
 
     def __str__(self) -> str:
@@ -103,34 +102,35 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             hash_vector[i] = hash(rounded_and_perturbed[i].tobytes())
         return hash_vector
 
-    def compute_hash_vector_array(self) -> np.ndarray:
-        """Creates the hash vector array for the dataset. Only unique hash values are stored for each perturbation.
+    def initialize_hash_vector_dictionary(self) -> None:
+        self.hash_dict = {i: {} for i in range(self.perturbations)}
 
-        Returns:
-            np.ndarray: A 2D array containing the hash values for each vector in the dataset for each perturbation.
-        """
-        self.initialize_hash_vector_array()
-        self._ensure_perturbation_array()
+    def compute_hash_vector_dictionary(self) -> dict:
+        self.initialize_hash_vector_dictionary()
         for i in range(self.vector_count):
-            hash_vector = self.create_hash_vector(self.dataset_array[i])
-            for j in range(self.perturbations):
-                if hash_vector[j] not in self.hash_vector_array[:, j]:
-                    self.hash_vector_array[i, j] = hash_vector[j]
-        return self.hash_vector_array
+            self.add_input_vector_hashes_to_dictionary(input_vector=self._dataset_array[i], input_index=i)
+        
+        return self.hash_dict
     
-    def initialize_hash_vector_array(self) -> None:
-        self.hash_vector_array = np.zeros((self.max_vector_array_size, self.perturbations), dtype=int)
-    
-    def get_filled_hash_vector_array(self) -> np.ndarray:
-        """Returns the filled portion of the hash vector array corresponding to the current dataset size."""
-        return self.hash_vector_array[: self.vector_count]
+    def add_input_vector_hashes_to_dictionary(self, input_vector: np.ndarray | None = None, input_index: int = None) -> None:
+        if input_vector is None:
+            input_vector = self.input_vector
+        if input_index is None:
+            input_index = self.vector_count
 
-    def _ensure_hash_vector_array(self):
-        if self.hash_vector_array.shape[0] != self.dataset_array.shape[0]:
-            warnings.warn(
-                "Hash vector array shape does not match dataset; recomputing."
-            )
-            self.compute_hash_vector_array()
+        hash_vector = self.create_hash_vector(input_vector)
+        self.warn_if_vector_dict_mismatch(hash_vector)
+
+        for hash_index, hash_value in enumerate(hash_vector):
+            if hash_value not in self.hash_dict[hash_index]:
+                self.hash_dict[hash_index][hash_value] = [input_index]
+            else:
+                self.hash_dict[hash_index][hash_value].append(input_index) # maybe replace with pre init boolean np array 
+
+    def warn_if_vector_dict_mismatch(self, hash_vector: np.ndarray):
+        if len(self.hash_dict) != len(hash_vector):
+            warnings.warn("Hash vector dictionary length does not match number of perturbations; recomputing. \nAssign the perturbation array and compute the hash vector dictionary prior to duplication checks to avoid this warning.")
+            self.compute_hash_vector_dictionary()
 
     def duplicate_check(self) -> bool:
         """duplicate check against dataset using multi-hashing approach.
@@ -138,12 +138,12 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         Returns:
             bool: True if a duplicate is detected, False otherwise.
         """
-        self._ensure_hash_vector_array()
         hash_vector = self.create_hash_vector()
+        self.warn_if_vector_dict_mismatch(hash_vector)
 
         clash_vector = np.zeros(self.perturbations, dtype=bool)
         for hash_index, hash_value in enumerate(hash_vector):
-            if hash_value in self.hash_vector_array[: self.vector_count, hash_index]:
+            if hash_value in self.hash_dict[hash_index]:
                 clash_vector[hash_index] = True
         duplicate_vote_array = np.sum(clash_vector) / self.perturbations
 
@@ -152,15 +152,16 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         return bool(duplicate_structure)
     
     def get_uniqueness_score(self) -> float:
-        self._ensure_hash_vector_array()
         hash_vector = self.create_hash_vector()
+        self.warn_if_vector_dict_mismatch(hash_vector)
         clash_vector = np.zeros(self.perturbations, dtype=bool)
         for hash_index, hash_value in enumerate(hash_vector):
-            if hash_value in self.hash_vector_array[: self.vector_count, hash_index]:
+            if hash_value in self.hash_dict[hash_index]:
                 clash_vector[hash_index] = True
         uniqueness_score = 1 - np.sum(clash_vector) / self.perturbations
 
         return uniqueness_score
+
 
     def get_dataset_unique_structures(self) -> int:
         """Counts the number of unique structures in the dataset by checking for hash value clashes across the dataset for each perturbation.
@@ -168,21 +169,38 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         Returns:
             int: The number of unique structures in the dataset.
         """
-        self.compute_hash_vector_array()
-        clash_array = np.zeros((self.hash_vector_array[: self.vector_count].shape), dtype=bool)
-        clash_array[np.nonzero(self.hash_vector_array[: self.vector_count])] = True
-        self.unique_vector_indices = np.sum(clash_array, axis=1) / self.perturbations >= self.acceptance_threshold
+        self.compute_hash_vector_dictionary()
+        u_list_of_lists = []
+        for i in range(self.perturbations):
+            u_list = [self.hash_dict[i][hash_value][0] for hash_value in self.hash_dict[i]]
+            u_list_of_lists.append(u_list)
+
+        # count the number of times each index appears across all perturbations
+        index_counts = {}
+        for i in range(self.vector_count):
+            for u_list in u_list_of_lists:
+                if i in u_list:
+                    if i not in index_counts:
+                        index_counts[i] = 1
+                    else:
+                        index_counts[i] += 1
         
+        # get indexes that appear in at least acceptance_threshold * perturbations perturbations
+        index_filter = [index for index, count in index_counts.items() if count / self.perturbations >= self.acceptance_threshold]
+
+        # convert to boolean array for indexing
+        self.unique_vector_indices = np.zeros(self.vector_count, dtype=bool)
+        self.unique_vector_indices[index_filter] = True
+    
         return np.sum(self.unique_vector_indices)
     
     def pre_dda_processing(self, *args, **kwargs) -> None:
-        self.preinitialize_dataset_array()
         self.set_perturbation_array()
+        self.compute_hash_vector_dictionary()
+        
 
     def add_input_vector_to_dda(self) -> None:
         """Add the input vector to the dataset array and update the hash vector array accordingly."""
-        self._ensure_hash_vector_array()
         self._dataset_array[self.vector_count] = self.input_vector
-        new_hash_vector = self.create_hash_vector()
-        self.hash_vector_array[self.vector_count] = new_hash_vector
+        self.add_input_vector_hashes_to_dictionary(self.input_vector)
         self.vector_count += 1

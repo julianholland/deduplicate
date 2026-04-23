@@ -55,6 +55,7 @@ class ToleranceCalculator(ABC):
         old_array=self.duplicate_detection_algorithm_object.get_filled_dataset_array()
         old_vector_count=self.duplicate_detection_algorithm_object.vector_count
         self.duplicate_detection_algorithm_object.set_dataset_array(self.tolerance_dataset_array)
+        
         self.duplicate_detection_algorithm_object.pre_dda_processing()
         
         for _ in range(self.binary_search_steps):
@@ -64,6 +65,7 @@ class ToleranceCalculator(ABC):
             ):
                 
                 unique_vectors = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
+                
             
             results_dict[tolerance] = unique_vectors
             if unique_vectors < target_unique_vectors: # loosen tolerance
@@ -82,6 +84,7 @@ class ToleranceCalculator(ABC):
                     best_min = tolerance
                 else:
                     best_max = tolerance
+            
             tolerance = (best_min + best_max) / 2
         
         # reset the dataset_array to the original dataset array after the search is complete
