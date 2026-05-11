@@ -29,7 +29,7 @@ class ToleranceCalculator(ABC):
             yield
         finally:
             setattr(obj, attr, original)
-
+    
     def binary_search_tolerance(
         self,
         target_unique_vectors: int,
@@ -65,7 +65,7 @@ class ToleranceCalculator(ABC):
             ):
                 
                 unique_vectors = self.duplicate_detection_algorithm_object.get_dataset_unique_structures()
-                
+            
             
             results_dict[tolerance] = unique_vectors
             if unique_vectors < target_unique_vectors: # loosen tolerance
@@ -84,7 +84,7 @@ class ToleranceCalculator(ABC):
                     best_min = tolerance
                 else:
                     best_max = tolerance
-            
+            print(f"Tolerance: {tolerance}, Unique Vectors: {unique_vectors}")
             tolerance = (best_min + best_max) / 2
         
         # reset the dataset_array to the original dataset array after the search is complete
