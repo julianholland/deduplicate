@@ -56,7 +56,8 @@ class PerturbedDatasetReclustering(ToleranceCalculator):
         Returns:
             float: The calculated tolerance value.
         """
-        self._ensure_perturbed_dataset()
+        self.duplicate_detection_algorithm_object.pre_dda_processing()
+        print(self.duplicate_detection_algorithm_object.vector_count)
         if self.target_unique_vectors_threshold == "average":        
             low_tolerance = self.binary_search_tolerance(
                 target_unique_vectors=self.target_unique_vectors,

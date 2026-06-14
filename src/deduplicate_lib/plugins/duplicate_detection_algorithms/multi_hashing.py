@@ -65,6 +65,8 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         self.perturbation_array = np.abs(
             rng.normal(loc=0.0, scale=1.0, size=self.perturbations)
         )
+        # self.perturbation_array = rng.normal(loc=0.0, scale=1.0, size=self.perturbations)
+        
 
     def _ensure_perturbation_array(self):
         
@@ -97,6 +99,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             input_vector = self.input_vector
         self._ensure_perturbation_array()
         rounded_and_perturbed = fast_round_and_perturb(input_vector, self.perturbation_array, self.tolerance)
+        rounded_and_perturbed = np.where(rounded_and_perturbed == 0, 0.0, rounded_and_perturbed) # ensure that any -0.0 values are converted to 0.0  otherwise they hash differently 
         hash_vector = np.zeros(self.perturbations, dtype=int)
         for i in range(self.perturbations):
             hash_vector[i] = hash(rounded_and_perturbed[i].tobytes())
@@ -112,7 +115,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         
         return self.hash_dict
     
-    def add_input_vector_hashes_to_dictionary(self, input_vector: np.ndarray | None = None, input_index: int = None) -> None:
+    def add_input_vector_hashes_to_dictionary(self, input_vector: np.ndarray | None = None, input_index: int | None = None) -> None:
         if input_vector is None:
             input_vector = self.input_vector
         if input_index is None:
@@ -123,9 +126,9 @@ class MultiHashing(DuplicateDetectionAlgorithm):
 
         for hash_index, hash_value in enumerate(hash_vector):
             if hash_value not in self.hash_dict[hash_index]:
-                self.hash_dict[hash_index][hash_value] = [input_index]
+                self.hash_dict[hash_index][hash_value] = {input_index: True} # if first time seeing this hash value, add index with True (indicating a unique structure for this perturbation)
             else:
-                self.hash_dict[hash_index][hash_value].append(input_index) # maybe replace with pre init boolean np array 
+                self.hash_dict[hash_index][hash_value][input_index] = False # if hash value already exists, add index with False (indicating a clash for this perturbation)
 
     def warn_if_vector_dict_mismatch(self, hash_vector: np.ndarray):
         if len(self.hash_dict) != len(hash_vector):
@@ -172,7 +175,8 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         self.compute_hash_vector_dictionary()
         u_list_of_lists = []
         for i in range(self.perturbations):
-            u_list = [self.hash_dict[i][hash_value][0] for hash_value in self.hash_dict[i]]
+            u_list_of_dicts = [self.hash_dict[i][hash_value] for hash_value in self.hash_dict[i]]
+            u_list = [unique_index for d in u_list_of_dicts for unique_index, is_unique in d.items() if is_unique]
             u_list_of_lists.append(u_list)
 
         # count the number of times each index appears across all perturbations
@@ -195,6 +199,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         return np.sum(self.unique_vector_indices)
     
     def pre_dda_processing(self, *args, **kwargs) -> None:
+        self.preinitialize_dataset_array()
         self.set_perturbation_array()
         self.compute_hash_vector_dictionary()
         

@@ -122,3 +122,17 @@ def test_calculate_tolerance_raises_for_invalid_target_unique_vectors_threshold(
         match=r"Invalid target_unique_vectors_threshold: invalid_mode\. Must be 'average', 'loose', or 'tight'\.",
     ):
         tc.calculate_tolerance()
+
+# def test_calculate_tolerance_with_no_vector_count(distance_matrix_dda, monkeypatch):
+#     tc = PerturbedDatasetReclustering(
+#         duplicate_detection_algorithm_object=distance_matrix_dda,
+#         target_unique_vectors_threshold="average",
+#     )
+
+#     # Avoid unrelated setup behavior; we only want to test the zero vector count branch
+#     monkeypatch.setattr(tc, "_ensure_perturbed_dataset", lambda: None)
+#     monkeypatch.setattr(tc.duplicate_detection_algorithm_object, "vector_count", None)
+
+
+#     tc.calculate_tolerance()
+#     assert tc.duplicate_detection_algorithm_object.vector_count is None

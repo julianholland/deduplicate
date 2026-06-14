@@ -100,18 +100,43 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
             sorted_tols,
             tolerance_results,
         )
-
+        print(f'plateau log: {plateau_log}')
+        
         plateau_lengths = []
-        for i in range(len(plateau_log)):
-            if plateau_log[i]:
-                if not plateau_log[i - 1]:
-                    start = i
-            else:
-                if plateau_log[i - 1]:
-                    end = i
-                    plateau_lengths.append(
-                        (sorted_tols[start], sorted_tols[end], end - start)
-                    )
+        starts=[]
+        ends=[]
+        # find starts
+        for i in range(1, len(plateau_log)):
+            if plateau_log[i] and not plateau_log[i - 1]:
+                starts.append(i)
+
+        # find ends
+        for i in range(1, len(plateau_log)):
+            if not plateau_log[i] and plateau_log[i - 1]:
+                ends.append(i)
+
+        # handle if starts and ends are mismatched due to starting or ending in a plateau
+        if len(starts) > len(ends):
+            ends.append(len(plateau_log))
+        elif len(ends) > len(starts):
+            starts.insert(0, 0)
+
+        # find lengths
+        for start, end in zip(starts, ends):
+            plateau_lengths.append(
+                (sorted_tols[start], sorted_tols[end], end - start)
+            )
+
+        # for i in range(len(plateau_log)):
+        #     if plateau_log[i]:
+        #         if not plateau_log[i - 1]:
+        #             start = i
+        #     else:
+        #         if plateau_log[i - 1]:
+        #             end = i
+        #             plateau_lengths.append(
+        #                 (sorted_tols[start], sorted_tols[end], end - start)
+        #             )
 
         return plateau_lengths
 

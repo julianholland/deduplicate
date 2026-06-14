@@ -83,6 +83,18 @@ def test_find_plateaus(distance_matrix_dda):
     assert len(no_plateaus) == 0
 
 
+def test_find_plateaus_handles_wraparound_start_end(distance_matrix_dda):
+    tc = NaturalTolerancePlateauProbe(duplicate_detection_algorithm_object=distance_matrix_dda)
+    # make a tolerance_results with more keys than the plateau_log we'll fake
+    tolerance_results = {0.0: 1, 0.1: 2, 0.2: 3, 0.3: 4}
+
+    # create a plateau_log that starts False and ends True (the previous buggy case)
+    tc.get_plateau_log = lambda sorted_tols, tr: np.array([False, True], dtype=bool)
+
+    # should not raise IndexError or UnboundLocalError; must return a list (possibly empty)
+    plateaus = tc.find_plateaus(tolerance_results)
+    assert isinstance(plateaus, list)
+
 @pytest.mark.parametrize("dda_fixture", ["distance_matrix_dda", "multi_hashing_dda"])
 def test_calculate_tolerance(request, dda_fixture):
     dda = request.getfixturevalue(dda_fixture)

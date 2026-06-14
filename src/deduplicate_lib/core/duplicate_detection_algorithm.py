@@ -197,9 +197,7 @@ class DuplicateDetectionAlgorithm(ABC):
     def get_vector_length(self) -> int:
         has_input = self.input_vector.size > 0
         has_dataset = self._dataset_array.size > 0
-        print(f"has_input: {has_input}, has_dataset: {has_dataset}")
-        print(f"input_vector: {self.input_vector}, dataset_array: {self._dataset_array}")
-        
+
         if has_input and has_dataset:
             print(self.input_vector.shape, self._dataset_array.shape)
             if self.input_vector.shape[0] != self._dataset_array.shape[1]:
@@ -209,6 +207,8 @@ class DuplicateDetectionAlgorithm(ABC):
             vector_length = self.input_vector.shape[0]
         elif has_dataset:
             vector_length = self._dataset_array.shape[1]
+        elif has_input:
+            vector_length = len(self.input_vector)
         else:
             raise ValueError(
                 "Cannot determine vector length from input vector or dataset array. "
@@ -219,9 +219,13 @@ class DuplicateDetectionAlgorithm(ABC):
 
     def preinitialize_dataset_array(self) -> None:
         vector_length=self.get_vector_length()
-
+        
         if self._dataset_array.shape[0] > self.max_vector_array_size:
             raise ValueError("Dataset array size exceeds maximum allowed size.")
+
+        if self._dataset_array.size == 0:
+            self.initialize_dataset_array(vector_length)
+            self.vector_count = 0
 
         if self._dataset_array.shape[0] != self.max_vector_array_size:
             existing_data = self._dataset_array.copy()

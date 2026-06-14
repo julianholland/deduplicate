@@ -25,7 +25,8 @@ data = np.vstack([original_data_point, perturbed_data])
 
 @pytest.mark.parametrize(
     "dda_fixture",
-    [["distance_matrix_dda", 0.16824430025255346], ["multi_hashing_dda", 0.5103011176085714]]
+    [["distance_matrix_dda", 0.16824430025255346], 
+     ["multi_hashing_dda", 0.2540022716601484]]
 )
 def test_pdr_with_dda(request, dda_fixture):
     dda = request.getfixturevalue(dda_fixture[0])
@@ -54,7 +55,7 @@ def test_pdr_with_dda(request, dda_fixture):
     "dda_fixture,tolerance_result_fixture",
     [
         ("distance_matrix_dda", 0.14141755074312934),
-        ("multi_hashing_dda", 0.17051136265740044),
+        ("multi_hashing_dda", 0.10502871363961308),
     ]
 )
 def test_ntpp_with_dda(request, dda_fixture, tolerance_result_fixture):
