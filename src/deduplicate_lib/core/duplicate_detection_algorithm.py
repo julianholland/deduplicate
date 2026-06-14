@@ -82,6 +82,7 @@ class DuplicateDetectionAlgorithm(ABC):
         self.unique_vector_indices = unique_vector_indices
         self.max_vector_array_size = max_vector_array_size
         self._dirty = True  # auxiliary structures (distance matrix, hash dict, ...) need (re)building
+        self.vector_count = 0
 
         self.set_dataset_array(dataset_array) if dataset_array.size > 0 else None
 
@@ -146,9 +147,7 @@ class DuplicateDetectionAlgorithm(ABC):
         self.distance_matrix[:, self.vector_count] = np.pad(new_distances, (0, self.max_vector_array_size - len(new_distances)), constant_values=0)
         
 
-    def pre_dda_processing(
-        self, input_dataset_array: np.ndarray | None = None, *args, **kwargs
-    ) -> None:
+    def pre_dda_processing(self, *args, **kwargs) -> None:
         """Ensure the dataset array and any algorithm-specific auxiliary structures (e.g. distance matrix, hash dictionary) are preallocated and up to date before duplication checks.
 
         This is idempotent: auxiliary structures are only rebuilt via `_rebuild_auxiliary_structures()` if the dataset has changed (`_dirty`) since they were last built. Child classes should implement `_rebuild_auxiliary_structures()` rather than overriding this method.
@@ -198,6 +197,12 @@ class DuplicateDetectionAlgorithm(ABC):
     def set_dataset_array(self, new_dataset_array: np.ndarray) -> None:
         """Create new dataset array with correct shape and vector count
         if the input vector and dataset are both empty then the vector length cannot be determined, so we initialize an empty dataset array"""
+        current_dataset_array = self._dataset_array[: self.vector_count]
+        if new_dataset_array.shape == current_dataset_array.shape and np.array_equal(
+            new_dataset_array, current_dataset_array
+        ):
+            return
+
         if new_dataset_array.shape[0] > self.max_vector_array_size:
             raise ValueError("New dataset array size exceeds maximum allowed size.")
         

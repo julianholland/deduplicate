@@ -25,9 +25,7 @@ def test_tolerance_probe(distance_matrix_dda):
         perturbation_scale=0.01,
     )
     tc.create_perturbed_dataset(seed=803)
-    tc.duplicate_detection_algorithm_object.pre_dda_processing(
-        tc.tolerance_dataset_array
-    )
+    tc.duplicate_detection_algorithm_object.pre_dda_processing()
 
     tolerance_results = tc.tolerance_probe(
         lower_tolerance=0.0, upper_tolerance=tc.perturbation_scale, tolerance_steps=10

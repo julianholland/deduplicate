@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Fixed
+- `MultiHashing.duplicate_check()` / `get_uniqueness_score()` no longer return stale results
+  when `tolerance`, `seed`, or `perturbations` change after the hash dictionary was first
+  built — `pre_dda_processing()` now detects these changes and forces a rebuild.
+- `DistanceMatrix.duplicate_check()` no longer triggers an unnecessary full O(N²)
+  distance-matrix rebuild (and large preallocation) on a clean dataset; it now only ensures
+  the dataset array is preinitialized.
+- `set_dataset_array()` is now a no-op (no reallocation, no `_dirty` invalidation) when the
+  incoming array is identical to the data already loaded, avoiding redundant rebuilds when
+  tolerance calculators temporarily swap datasets and restore the original.
+- Removed a redundant double-computation of the hash vector dictionary in
+  `MultiHashing.get_dataset_unique_structures()`.
+- `DistanceMatrix._rebuild_auxiliary_structures()` no longer redundantly reinitializes the
+  distance matrix before recomputing it.
+
+### Changed
+- Dropped the unused `input_dataset_array` parameter from `pre_dda_processing()`.
+- Extracted `MultiHashing._perturbation_array_stale()` to share the perturbation-array
+  staleness check between `pre_dda_processing()` and `_rebuild_auxiliary_structures()`.
+
+---
+
 ## [0.0.5] - 2026-04-23
 
 ### Changed

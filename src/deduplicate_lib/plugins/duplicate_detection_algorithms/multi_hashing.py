@@ -175,7 +175,6 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             int: The number of unique structures in the dataset.
         """
         self.pre_dda_processing()
-        self.compute_hash_vector_dictionary()
         u_list_of_lists = []
         for i in range(self.perturbations):
             u_list_of_dicts = [self.hash_dict[i][hash_value] for hash_value in self.hash_dict[i]]
@@ -201,10 +200,26 @@ class MultiHashing(DuplicateDetectionAlgorithm):
     
         return np.sum(self.unique_vector_indices)
     
+    def _perturbation_array_stale(self) -> bool:
+        return (
+            self.perturbation_array.shape[0] != self.perturbations
+            or self.seed != getattr(self, "_hash_dict_seed", None)
+        )
+
+    def pre_dda_processing(self, *args, **kwargs) -> None:
+        if (
+            self.tolerance != getattr(self, "_hash_dict_tolerance", None)
+            or self._perturbation_array_stale()
+        ):
+            self._dirty = True
+        super().pre_dda_processing(*args, **kwargs)
+
     def _rebuild_auxiliary_structures(self) -> None:
-        if self.perturbation_array.shape[0] != self.perturbations:
+        if self._perturbation_array_stale():
             self.set_perturbation_array()
         self.compute_hash_vector_dictionary()
+        self._hash_dict_tolerance = self.tolerance
+        self._hash_dict_seed = self.seed
 
     def _append_vector_to_structures(self) -> None:
         """Add the input vector to the dataset array and update the hash vector array accordingly."""

@@ -233,6 +233,50 @@ def test_get_uniqueness_score(multi_hashing_dda):
     uniqueness_score=dda.get_uniqueness_score()
     assert uniqueness_score > 0.0 and uniqueness_score <= 1.0
 
+def test_duplicate_check_rebuilds_hash_dict_on_tolerance_change():
+    dda = MultiHashing(
+        tolerance=0.01,
+        perturbations=5,
+        input_vector=np.array([10.0, 20.0]),
+        dataset_array=np.array([[1.0, 2.0], [1.01, 2.01], [0.0, 2.0]]),
+    )
+
+    # first build, with the initial tolerance
+    first_result = dda.duplicate_check()
+    assert dda._dirty is False
+
+    # change tolerance to something which should change clash behaviour
+    dda.tolerance = 50.0
+    second_result = dda.duplicate_check()
+
+    # force a rebuild from scratch with the same (new) tolerance
+    dda._dirty = True
+    third_result = dda.duplicate_check()
+
+    assert second_result == third_result
+    # sanity check that the tolerance change actually mattered vs the first result
+    assert first_result != second_result
+
+
+def test_duplicate_check_regenerates_perturbation_array_on_seed_change():
+    dda = MultiHashing(
+        tolerance=0.01,
+        perturbations=5,
+        seed=803,
+        input_vector=np.array([1.0, 2.0]),
+        dataset_array=np.array([[1.0, 2.0], [1.01, 2.01], [10.0, 20.0]]),
+    )
+
+    dda.duplicate_check()
+    perturbation_array_before = dda.perturbation_array.copy()
+
+    dda.seed = 8  # different seed
+    dda.duplicate_check()
+    perturbation_array_after = dda.perturbation_array
+
+    assert not np.array_equal(perturbation_array_before, perturbation_array_after)
+
+
 def test_add_input_vector_hashes_to_dictionary_without_input_vector(multi_hashing_dda):
     dda = multi_hashing_dda
     dda.set_dataset_array(np.array([[1.0, 2.0], [1.001, 2.001], [10.0, 20.0]]))

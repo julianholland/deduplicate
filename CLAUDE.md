@@ -63,3 +63,9 @@ Hot loops (`fast_compute_distance_matrix`, `fast_get_new_distance_matrix_column`
 - `tests/unit/` mirrors `src/deduplicate_lib/` structure (`core/`, `plugins/duplicate_detection_algoirthms/` [sic], `plugins/tolerance_calculators/`).
 - `tests/integration/` covers end-to-end flows including the example notebook (`test_example_notebook.py`).
 - `tests/conftest.py` provides shared fixtures including `DummyDDA`/`DummyToleranceCalculator` minimal implementations and pre-built `distance_matrix_dda`/`multi_hashing_dda` fixtures.
+
+## Agent Delegation Rules
+- Use Haiku subagents for: file scanning, search, bulk edits, boilerplate
+- Use Sonnet subagents for: code review, test writing, refactoring
+- Reserve Opus (main agent) for: architecture decisions, complex debugging, multi-step reasoning
+- Always spawn subagents for parallelizable tasks

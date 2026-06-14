@@ -27,6 +27,23 @@ def test_duplicate_check():
     dda.input_vector = np.array([10.0, 20.0])
     assert not dda.duplicate_check()
 
+def test_duplicate_check_does_not_build_distance_matrix():
+    dda = DistanceMatrix(
+        tolerance=0.1,
+        input_vector=np.array([1.0, 2.0]),
+        dataset_array=np.array([[1.0, 2.0], [1.1, 2.1], [0.9, 1.9]]),
+        distance_matrix=np.array([]),
+        distance_metric="euclidean",
+    )
+    dda.duplicate_check()
+    assert dda.distance_matrix.size == 0
+    assert dda._dirty is True
+
+    dda.get_dataset_unique_structures()
+    assert dda.distance_matrix.size > 0
+    assert dda._dirty is False
+
+
 def test_duplicate_check_if_distance_matrix_wrong_shape():
     dda = DistanceMatrix(
         tolerance=0.1,

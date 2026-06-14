@@ -131,6 +131,7 @@ def test_pre_dda_processing_is_idempotent_until_dataset_changes(distance_matrix_
     dda.pre_dda_processing()
     assert dda._dirty is False
     distance_matrix_after_first_build = dda.distance_matrix
+    distance_matrix_top_left_after_first_build = dda.distance_matrix[:2, :2].copy()
 
     # calling pre_dda_processing again without changing the dataset should not rebuild
     dda.pre_dda_processing()
@@ -143,7 +144,25 @@ def test_pre_dda_processing_is_idempotent_until_dataset_changes(distance_matrix_
 
     dda.pre_dda_processing()
     assert dda._dirty is False
-    assert dda.distance_matrix is not distance_matrix_after_first_build
+    assert not np.array_equal(
+        dda.get_filled_distance_matrix(), distance_matrix_top_left_after_first_build
+    )
+    dda.set_dataset_array(np.array([[1.0, 2.0]]))
+
+
+def test_set_dataset_array_no_op_for_unchanged_array(dummy_dda):
+    dda = dummy_dda
+    dda.pre_dda_processing()
+    assert dda._dirty is False
+
+    # setting the same dataset array (same shape & values) should be a no-op
+    unchanged_dataset = dda.get_filled_dataset_array().copy()
+    dda.set_dataset_array(unchanged_dataset)
+    assert dda._dirty is False
+
+    # setting a genuinely different dataset array should mark dirty
+    dda.set_dataset_array(np.array([[3.0, 4.0]]))
+    assert dda._dirty is True
     dda.set_dataset_array(np.array([[1.0, 2.0]]))
 
 
