@@ -41,6 +41,29 @@ def test_tolerance_probe(distance_matrix_dda):
         assert unique_structures > 0
 
 
+def test_tolerance_probe_rebuilds_distance_matrix_for_swapped_dataset(distance_matrix_dda):
+    """Regression test: tolerance_probe() swaps in tolerance_dataset_array via set_dataset_array(),
+    which must trigger a distance matrix rebuild rather than relying on a stale matrix
+    computed for whatever dataset was previously active."""
+    dda = distance_matrix_dda
+    # build & cache the distance matrix for the dda's original (small-distance) dataset
+    dda.pre_dda_processing()
+
+    tc = NaturalTolerancePlateauProbe(
+        duplicate_detection_algorithm_object=dda,
+        perturbations_per_vector=1,
+    )
+
+    # all three points are far apart, so every tolerance in (0, 1) should yield 3 unique vectors
+    tc.tolerance_dataset_array = np.array([[0.0, 0.0], [100.0, 100.0], [200.0, 200.0]])
+
+    tolerance_results = tc.tolerance_probe(
+        lower_tolerance=0.1, upper_tolerance=0.9, tolerance_steps=3
+    )
+
+    assert all(unique_count == 3 for unique_count in tolerance_results.values())
+
+
 def test_find_plateaus(distance_matrix_dda):
     tc = NaturalTolerancePlateauProbe(
         duplicate_detection_algorithm_object=distance_matrix_dda,

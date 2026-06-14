@@ -139,6 +139,7 @@ def test_duplicate_check(multi_hashing_dda):
 
 def test_duplicate_check_if_hash_vector_array_wrong_shape(multi_hashing_dda):
     dda = multi_hashing_dda
+    dda.pre_dda_processing()  # ensure auxiliary structures are already built so they are not rebuilt below
     dda.hash_dict = {803: []}  # incorrect shape
 
     dda.set_perturbation_array()  # Ensure perturbation array is set before duplication check
@@ -200,7 +201,24 @@ def test_add_input_vector_to_dda(multi_hashing_dda):
         all_values = [i for sub in list(dda.hash_dict[i].values()) for i in sub]
         assert dda.vector_count-1 in all_values
 
-    
+
+def test_add_input_vector_to_dda_without_prior_pre_dda_processing():
+    dda = MultiHashing(
+        tolerance=0.01,
+        perturbations=5,
+        input_vector=np.array([10.0, 20.0]),
+        dataset_array=np.array([[1.0, 2.0], [1.01, 2.01], [0.0, 2.0]]),
+    )
+    initial_dataset_size = dda.get_filled_dataset_array().shape[0]
+    dda.add_input_vector_to_dda()
+    assert dda.get_filled_dataset_array().shape[0] == initial_dataset_size + 1
+    assert np.array_equal(dda.get_filled_dataset_array()[-1], dda.input_vector)
+    for i in range(dda.perturbations):
+        assert len(dda.hash_dict[i]) > 0
+        all_values = [idx for sub in dda.hash_dict[i].values() for idx in sub]
+        assert dda.vector_count - 1 in all_values
+
+
 
 def test_get_uniqueness_score(multi_hashing_dda):
     dda = multi_hashing_dda

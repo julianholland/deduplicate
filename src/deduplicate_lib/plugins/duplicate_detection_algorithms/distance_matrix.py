@@ -22,6 +22,7 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
         return f"DistanceMatrix(tolerance={self.tolerance}, distance_metric={self.distance_metric})"
 
     def duplicate_check(self) -> bool:
+        self.pre_dda_processing()
         return bool(
             np.any(
                 self.get_new_distance_matrix_column(self.dataset_array) < self.tolerance
@@ -29,6 +30,7 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
         )
 
     def get_dataset_unique_structures(self) -> int:
+        self.pre_dda_processing()
         self.unique_vector_indices = np.zeros(self.vector_count, dtype=bool)
         self.unique_vector_indices[0] = True  # the first vector is always unique
         for i in range(1, self.vector_count):
@@ -37,14 +39,12 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
                 self.unique_vector_indices[i] = True
         return np.sum(self.unique_vector_indices)
 
-    def pre_dda_processing(self, *args, **kwargs) -> None:
-        self.preinitialize_dataset_array()
+    def _rebuild_auxiliary_structures(self) -> None:
         self.initialize_distance_matrix()
         self.compute_distance_matrix(self.dataset_array)
-    
-    def add_input_vector_to_dda(self) -> None:
+
+    def _append_vector_to_structures(self) -> None:
         """Add the input vector to the dataset array and update the distance matrix accordingly."""
         self.add_new_vector_to_distance_matrix(self.dataset_array)
         self._dataset_array[self.vector_count] = self.input_vector
         self.vector_count += 1
-        

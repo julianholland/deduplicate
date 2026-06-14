@@ -126,6 +126,27 @@ def test_get_unique_vector_indices(dummy_dda):
     assert dummy_dda.unique_vector_indices.shape == (1,)
     assert dummy_dda.unique_vector_indices[0] is np.bool_(True)
 
+def test_pre_dda_processing_is_idempotent_until_dataset_changes(distance_matrix_dda):
+    dda = distance_matrix_dda
+    dda.pre_dda_processing()
+    assert dda._dirty is False
+    distance_matrix_after_first_build = dda.distance_matrix
+
+    # calling pre_dda_processing again without changing the dataset should not rebuild
+    dda.pre_dda_processing()
+    assert dda._dirty is False
+    assert dda.distance_matrix is distance_matrix_after_first_build
+
+    # changing the dataset marks the auxiliary structures as stale again
+    dda.set_dataset_array(np.array([[5.0, 5.0], [6.0, 6.0]]))
+    assert dda._dirty is True
+
+    dda.pre_dda_processing()
+    assert dda._dirty is False
+    assert dda.distance_matrix is not distance_matrix_after_first_build
+    dda.set_dataset_array(np.array([[1.0, 2.0]]))
+
+
 def test_initialize_dataset_array(dummy_dda):
     dummy_dda.initialize_dataset_array(vector_length=3)
     assert dummy_dda._dataset_array.shape == (dummy_dda.max_vector_array_size, 3)

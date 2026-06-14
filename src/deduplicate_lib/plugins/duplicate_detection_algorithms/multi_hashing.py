@@ -141,6 +141,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         Returns:
             bool: True if a duplicate is detected, False otherwise.
         """
+        self.pre_dda_processing()
         hash_vector = self.create_hash_vector()
         self.warn_if_vector_dict_mismatch(hash_vector)
 
@@ -155,6 +156,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         return bool(duplicate_structure)
     
     def get_uniqueness_score(self) -> float:
+        self.pre_dda_processing()
         hash_vector = self.create_hash_vector()
         self.warn_if_vector_dict_mismatch(hash_vector)
         clash_vector = np.zeros(self.perturbations, dtype=bool)
@@ -172,6 +174,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         Returns:
             int: The number of unique structures in the dataset.
         """
+        self.pre_dda_processing()
         self.compute_hash_vector_dictionary()
         u_list_of_lists = []
         for i in range(self.perturbations):
@@ -198,13 +201,12 @@ class MultiHashing(DuplicateDetectionAlgorithm):
     
         return np.sum(self.unique_vector_indices)
     
-    def pre_dda_processing(self, *args, **kwargs) -> None:
-        self.preinitialize_dataset_array()
-        self.set_perturbation_array()
+    def _rebuild_auxiliary_structures(self) -> None:
+        if self.perturbation_array.shape[0] != self.perturbations:
+            self.set_perturbation_array()
         self.compute_hash_vector_dictionary()
-        
 
-    def add_input_vector_to_dda(self) -> None:
+    def _append_vector_to_structures(self) -> None:
         """Add the input vector to the dataset array and update the hash vector array accordingly."""
         self._dataset_array[self.vector_count] = self.input_vector
         self.add_input_vector_hashes_to_dictionary(self.input_vector)

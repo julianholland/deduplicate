@@ -81,6 +81,7 @@ class DuplicateDetectionAlgorithm(ABC):
         self.distance_metric = distance_metric
         self.unique_vector_indices = unique_vector_indices
         self.max_vector_array_size = max_vector_array_size
+        self._dirty = True  # auxiliary structures (distance matrix, hash dict, ...) need (re)building
 
         self.set_dataset_array(dataset_array) if dataset_array.size > 0 else None
 
@@ -148,11 +149,26 @@ class DuplicateDetectionAlgorithm(ABC):
     def pre_dda_processing(
         self, input_dataset_array: np.ndarray | None = None, *args, **kwargs
     ) -> None:
-        """A method that can be overridden by child classes to perform any necessary processing before duplication checks. For example, this could be used to compute the distance matrix for the dataset before any duplication checks are performed, which would save time if multiple duplication checks are being performed on the same dataset with different input vectors."""
+        """Ensure the dataset array and any algorithm-specific auxiliary structures (e.g. distance matrix, hash dictionary) are preallocated and up to date before duplication checks.
+
+        This is idempotent: auxiliary structures are only rebuilt via `_rebuild_auxiliary_structures()` if the dataset has changed (`_dirty`) since they were last built. Child classes should implement `_rebuild_auxiliary_structures()` rather than overriding this method.
+        """
+        self.preinitialize_dataset_array()
+        if self._dirty:
+            self._rebuild_auxiliary_structures()
+            self._dirty = False
+
+    def _rebuild_auxiliary_structures(self) -> None:
+        """Rebuild any algorithm-specific auxiliary structures from the current dataset array. Overridden by child classes."""
         pass
 
     def add_input_vector_to_dda(self) -> None:
-        """Add the input vector to the dataset array and update the distance matrix accordingly."""
+        """Add the input vector to the dataset array and update any auxiliary structures accordingly."""
+        self.pre_dda_processing()
+        self._append_vector_to_structures()
+
+    def _append_vector_to_structures(self) -> None:
+        """Append `input_vector` to the dataset array and incrementally update any auxiliary structures. Overridden by child classes."""
         pass
 
     def get_unique_vector_indices(self) -> np.ndarray:
@@ -188,11 +204,13 @@ class DuplicateDetectionAlgorithm(ABC):
         self.vector_count = new_dataset_array.shape[0]
         if new_dataset_array.size == 0 and self.input_vector.size > 0:
             self.initialize_dataset_array(len(self.input_vector))
-        elif new_dataset_array.size > 0:         
+        elif new_dataset_array.size > 0:
             self.initialize_dataset_array(new_dataset_array.shape[1])
             self._dataset_array[: self.vector_count] = new_dataset_array
         else:
             self._dataset_array = new_dataset_array
+
+        self._dirty = True
     
     def get_vector_length(self) -> int:
         has_input = self.input_vector.size > 0

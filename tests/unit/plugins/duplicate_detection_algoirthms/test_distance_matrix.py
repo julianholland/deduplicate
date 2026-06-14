@@ -69,3 +69,16 @@ def test_add_input_vector_to_dda(distance_matrix_dda):
     assert dda.get_filled_dataset_array().shape[0] == initial_dataset_size + 1
     assert np.array_equal(dda.get_filled_dataset_array()[-1], dda.input_vector)
     assert dda.get_filled_distance_matrix().shape[0] == initial_distance_matrix_size + 1
+
+
+def test_add_input_vector_to_dda_without_prior_pre_dda_processing():
+    dda = DistanceMatrix(
+        tolerance=0.1,
+        input_vector=np.array([10.0, 20.0]),
+        dataset_array=np.array([[1.0, 2.0], [1.1, 2.1], [0.9, 1.9]]),
+    )
+    initial_dataset_size = dda.get_filled_dataset_array().shape[0]
+    dda.add_input_vector_to_dda()
+    assert dda.get_filled_dataset_array().shape[0] == initial_dataset_size + 1
+    assert np.array_equal(dda.get_filled_dataset_array()[-1], dda.input_vector)
+    assert dda.get_filled_distance_matrix().shape[0] == initial_dataset_size + 1
