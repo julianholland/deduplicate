@@ -7,6 +7,47 @@ import numpy as np
 import warnings
 @register_plugin("tolerance_calculator", "natural_tolerance_plateau_probe")
 class NaturalTolerancePlateauProbe(ToleranceCalculator):
+    """Tolerance calculator that finds a stable tolerance directly from the dataset.
+
+    No perturbed copies are required.  The algorithm:
+
+    1. Binary-searches for the "all same" tolerance (nearly all vectors
+       collapse to one cluster) and the "all different" tolerance (nearly every
+       vector is unique).
+    2. Sweeps ``probe_steps`` evenly-spaced tolerance values between those bounds
+       and records the unique-structure count at each step.
+    3. Identifies plateaus — regions where the gradient of unique counts with
+       respect to tolerance is below ``plateau_threshold`` — and returns the
+       midpoint of the longest plateau found.
+
+    Parameters
+    ----------
+    duplicate_detection_algorithm_object : DuplicateDetectionAlgorithm
+        The DDA used to count unique structures during the search.
+    tolerance_dataset_array : np.ndarray, optional
+        Dataset to probe.  Defaults to the DDA's current dataset.
+    perturbations_per_vector : int, optional
+        Inherited from base class; not used by this calculator.
+    perturbation_scale : float, optional
+        Inherited from base class; not used by this calculator.
+    binary_search_steps : int, optional
+        Iterations for the all-same / all-different binary searches.
+        Defaults to ``50``.
+    probe_steps : int, optional
+        Number of evenly-spaced tolerance values to evaluate between the
+        all-same and all-different bounds.  Defaults to ``100``.
+    probe_buffer_fraction : float, optional
+        Fraction of dataset size used as a margin when defining the all-same
+        and all-different bounds (avoids exact extremes).  Defaults to ``0.1``.
+    datapoints_to_calculate_gradient : int, optional
+        Window size (in probe steps) for computing the local gradient.
+        Must be greater than 1.  Defaults to ``3``.
+    plateau_threshold : float, optional
+        Gradient magnitude below which a region is considered a plateau,
+        expressed as a fraction of the total gradient across the sweep.
+        Defaults to ``1e-3``.
+    """
+
     def __init__(
         self,
         duplicate_detection_algorithm_object: DuplicateDetectionAlgorithm,
@@ -141,6 +182,14 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
         return plateau_lengths
 
     def calculate_tolerance(self) -> float:
+        """Compute and return the midpoint of the longest plateau in the unique-count curve.
+
+        Returns
+        -------
+        float
+            Midpoint of the longest detected plateau.  Falls back to the average
+            of the all-same and all-different tolerances if no plateau is found.
+        """
         self._ensure_perturbed_dataset()
         all_same_tolerance = self.binary_search_tolerance(
             target_unique_vectors=int(

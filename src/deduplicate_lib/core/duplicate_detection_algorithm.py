@@ -61,6 +61,43 @@ DISTANCE_FUNCTIONS = {
 
 
 class DuplicateDetectionAlgorithm(ABC):
+    """Abstract base class for deduplication algorithms operating on numpy vector arrays.
+
+    Subclasses implement ``duplicate_check()`` and ``get_dataset_unique_structures()``
+    using algorithm-specific auxiliary structures (e.g. a distance matrix or hash
+    dictionary).  The public interface is:
+
+    * ``tolerance`` — distance threshold below which two vectors are considered duplicates.
+    * ``input_vector`` — the single vector to check or append.
+    * ``dataset_array`` — read-only view of the currently loaded vectors.
+    * ``vector_count`` — number of vectors currently in the dataset.
+
+    ``_dataset_array`` and ``distance_matrix`` are pre-allocated to
+    ``max_vector_array_size`` rows to avoid repeated reallocation.  Load data via
+    ``set_dataset_array()``; never assign to ``dataset_array`` directly.
+
+    Parameters
+    ----------
+    tolerance : float
+        Distance threshold for duplicate detection.
+    input_vector : np.ndarray, optional
+        Single vector to check against the dataset.
+    dataset_array : np.ndarray, optional
+        Initial dataset of vectors (rows).  Copied into the pre-allocated backing
+        array.
+    distance_matrix : np.ndarray, optional
+        Pre-computed distance matrix.  If empty, it is allocated on first use.
+    distance_metric : str, optional
+        One of ``"euclidean"``, ``"manhattan"``, ``"cosine"``, ``"hamming"``.
+        Defaults to ``"euclidean"``.
+    unique_vector_indices : np.ndarray, optional
+        Boolean array marking unique vectors.  Updated by
+        ``get_dataset_unique_structures()``.
+    max_vector_array_size : int, optional
+        Maximum number of vectors the pre-allocated arrays can hold.
+        Defaults to 10000.
+    """
+
     ALLOWED_DISTANCES = DISTANCE_FUNCTIONS
 
     def __init__(
@@ -162,7 +199,13 @@ class DuplicateDetectionAlgorithm(ABC):
         pass
 
     def add_input_vector_to_dda(self) -> None:
-        """Add the input vector to the dataset array and update any auxiliary structures accordingly."""
+        """Add ``self.input_vector`` to the dataset and incrementally update auxiliary structures.
+
+        ``self.input_vector`` must be set before calling.  Auxiliary structures
+        (distance-matrix column or hash-dict entry) are updated incrementally
+        rather than rebuilt from scratch, making this efficient for streaming
+        ingestion.
+        """
         self.pre_dda_processing()
         self._append_vector_to_structures()
 
@@ -179,7 +222,18 @@ class DuplicateDetectionAlgorithm(ABC):
         return np.where(self.unique_vector_indices)[0]
 
     def deduplicate(self):
-        """Finds all unique vectors in the dataset and returns them as a new array."""
+        """Return all unique vectors in the dataset as a new array.
+
+        Returns
+        -------
+        np.ndarray
+            2-D array whose rows are the unique vectors.
+
+        Notes
+        -----
+        Calls ``get_dataset_unique_structures()`` (via ``pre_dda_processing``) to
+        ensure auxiliary structures are up to date before selecting unique rows.
+        """
         return self.dataset_array[self.get_unique_vector_indices()]
     
     def initialize_dataset_array(self, vector_length: int) -> None:
@@ -258,6 +312,16 @@ class DuplicateDetectionAlgorithm(ABC):
 
     @abstractmethod
     def duplicate_check(self) -> bool:
+        """Check whether ``self.input_vector`` is a duplicate of any vector in the dataset.
+
+        ``self.input_vector`` must be set before calling.
+
+        Returns
+        -------
+        bool
+            ``True`` if ``self.input_vector`` is within ``self.tolerance`` of any
+            existing dataset vector; ``False`` otherwise.
+        """
         pass # pragma: no cover
 
     @abstractmethod

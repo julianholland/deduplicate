@@ -21,15 +21,20 @@ version = {attr = "deduplicate_lib.__version__"}
 
 [project.optional-dependencies]
 dev = [
-    "pytest", 
-    "pytest-mock", 
-    "coverage", 
-    "ruff", 
-    "nbconvert", 
+    "pytest",
+    "pytest-mock",
+    "coverage",
+    "ruff",
+    "nbconvert",
     "nbclient",
     "notebook",
     "ipykernel",
     "matplotlib",]
+docs = [
+    "sphinx>=7",
+    "furo",
+    "sphinx-autodoc-typehints",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

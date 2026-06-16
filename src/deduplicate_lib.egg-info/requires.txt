@@ -12,3 +12,8 @@ nbclient
 notebook
 ipykernel
 matplotlib
+
+[docs]
+sphinx>=7
+furo
+sphinx-autodoc-typehints

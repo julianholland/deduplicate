@@ -6,22 +6,33 @@ import numpy as np
 
 @register_plugin("tolerance_calculator", "perturbed_dataset_reclustering")
 class PerturbedDatasetReclustering(ToleranceCalculator):
-    """A tolerance calculator that creates a perturbed dataset from the original dataset, then uses the duplicate detection algorithm to find the tolerance that yields the same number of unique structures in the perturbed dataset as in the target. The tolerance can be calculated as 'loose' (the highest tolerance that yields the target number of unique structures), 'tight' (the lowest tolerance that yields the target number of unique structures), or 'average' (the average of the highest and lowest tolerances that yield the target number of unique structures).
+    """Tolerance calculator based on perturbed-dataset reclustering.
 
-    Args:
-        duplicate_detection_algorithm_object (DuplicateDetectionAlgorithm): The duplicate detection algorithm object to use for calculating the tolerance.
-        tolerance_dataset_array (np.ndarray, optional): The dataset array to use for calculating the tolerance. If not provided, the dataset array from the duplicate detection algorithm object will be used. Defaults to np.array([]).
-        perturbations_per_vector (int, optional): The number of perturbations to create for each vector in the dataset array. Defaults to 1.
-        perturbation_scale (float, optional): The scale of the perturbations to create. Defaults to 0.1.
-        binary_search_steps (int, optional): The number of steps to use for the binary search to find the tolerance. Defaults to 20.
-        target_structures (int | None, optional): The target number of unique structures to find the tolerance for. If None, the target will be the number of unique structures in the original dataset array. Defaults to None.
-        target_structures_threshold (str, optional): The method to use for calculating the tolerance threshold. Can be 'average', 'loose', or 'tight'. Defaults to 'average'.
+    Creates ``perturbations_per_vector`` noisy copies of each original vector,
+    then binary-searches for the tolerance that recovers the original unique-vector
+    count in the perturbed dataset.  The returned value depends on
+    ``target_unique_vectors_threshold``: ``"loose"`` returns the highest valid
+    tolerance, ``"tight"`` the lowest, and ``"average"`` their mean.
 
-    Functions:
-        calculate_tolerance: Calculate the tolerance value based on the perturbed dataset and the target number of unique structures.
-
-        Returns:
-            float: The calculated tolerance value.
+    Parameters
+    ----------
+    duplicate_detection_algorithm_object : DuplicateDetectionAlgorithm
+        The DDA used to count unique structures during the search.
+    tolerance_dataset_array : np.ndarray, optional
+        Dataset to search over.  Defaults to the DDA's current dataset.
+    perturbations_per_vector : int, optional
+        Number of perturbed copies per original vector.  Defaults to ``1``
+        (no perturbation; pass the original vectors directly).
+    perturbation_scale : float, optional
+        Standard deviation of the Gaussian noise added per perturbation.
+        Defaults to ``0.1``.
+    binary_search_steps : int, optional
+        Number of binary-search iterations.  Defaults to ``20``.
+    target_unique_vectors : int or None, optional
+        Target unique-vector count.  ``None`` uses the current dataset size.
+    target_unique_vectors_threshold : str, optional
+        One of ``"average"``, ``"loose"``, or ``"tight"``.  Defaults to
+        ``"average"``.
     """
     def __init__(self,
         duplicate_detection_algorithm_object: DuplicateDetectionAlgorithm,

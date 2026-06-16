@@ -4,6 +4,34 @@ import numpy as np
 
 @register_plugin(kind="duplicate_detection_algorithm", name="distance_matrix")
 class DistanceMatrix(DuplicateDetectionAlgorithm):
+    """Exact deduplication using a full pairwise distance matrix.
+
+    Computes all N×N pairwise distances and flags any vector whose nearest
+    neighbour is within ``tolerance`` as a duplicate.  O(N²) time and space;
+    suitable for small-to-medium datasets (up to ~5 000 vectors) where exact
+    results are required.  Supports all four distance metrics: ``"euclidean"``,
+    ``"manhattan"``, ``"cosine"``, and ``"hamming"``.
+
+    Parameters
+    ----------
+    tolerance : float, optional
+        Distance threshold for duplicate detection.  Defaults to ``0.1``.
+    input_vector : np.ndarray, optional
+        Single vector to check against the dataset.
+    dataset_array : np.ndarray, optional
+        Initial dataset of vectors (rows).
+    distance_matrix : np.ndarray, optional
+        Pre-computed distance matrix.  Allocated automatically if empty.
+    distance_metric : str, optional
+        One of ``"euclidean"``, ``"manhattan"``, ``"cosine"``, ``"hamming"``.
+        Defaults to ``"euclidean"``.
+    unique_vector_indices : np.ndarray, optional
+        Boolean array marking unique vectors.
+    max_vector_array_size : int, optional
+        Maximum number of vectors the pre-allocated arrays can hold.
+        Defaults to 10000.
+    """
+
     def __init__(
         self,
         tolerance: float = 0.1,

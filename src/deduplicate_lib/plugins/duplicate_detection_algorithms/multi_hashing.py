@@ -24,6 +24,57 @@ def fast_round_and_perturb(input_vector, perturbation_array, tolerance):
 
 @register_plugin(kind="duplicate_detection_algorithm", name="multi_hashing")
 class MultiHashing(DuplicateDetectionAlgorithm):
+    """Approximate deduplication via random perturbation and hashing.
+
+    Each vector is smeared with ``perturbations`` random scale factors, rounded
+    to the nearest ``tolerance`` grid point, and hashed.  A vector is declared a
+    duplicate if at least ``acceptance_threshold`` (derived from
+    ``sigma_accepatnce_threshold``) of its perturbation hashes collide with any
+    existing hash-dictionary entry.  O(N · perturbations) time; significantly
+    faster than :class:`DistanceMatrix` for large datasets.
+
+    Only ``"hamming"`` distance is supported.
+
+    Parameters
+    ----------
+    tolerance : float, optional
+        Rounding grid size and distance threshold.  Defaults to ``0.1``.
+    input_vector : np.ndarray, optional
+        Single vector to check against the dataset.
+    dataset_array : np.ndarray, optional
+        Initial dataset of vectors (rows).
+    perturbations : int, optional
+        Number of random perturbations per vector.  More perturbations increase
+        accuracy at the cost of speed.  Defaults to ``200``.
+    seed : int, optional
+        Random seed for generating the perturbation array.  Defaults to ``803``.
+    pertrubation_array : np.ndarray, optional
+        Pre-computed perturbation scale factors.  Generated from ``seed`` if
+        not provided or if its length does not match ``perturbations``.
+    distance_metric : str, optional
+        Must be ``"hamming"``.
+    sigma_accepatnce_threshold : int, optional
+        Controls the acceptance band (1–4):
+
+        ======  ================
+        Value   Acceptance band
+        ======  ================
+        1       68.3%  (default)
+        2       95.4%
+        3       99.7%
+        4       99.99%
+        ======  ================
+
+        Higher values reduce false positives but require more perturbations.
+    distance_matrix : np.ndarray, optional
+        Unused by this algorithm; kept for interface compatibility.
+    unique_vector_indices : np.ndarray, optional
+        Boolean array marking unique vectors.
+    max_vector_array_size : int, optional
+        Maximum number of vectors the pre-allocated arrays can hold.
+        Defaults to 10000.
+    """
+
     ALLOWED_DISTANCES = {"hamming": hamming_distance}
 
     def __init__(

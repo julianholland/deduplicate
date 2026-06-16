@@ -146,4 +146,11 @@ class ToleranceCalculator(ABC):
 
     @abstractmethod
     def calculate_tolerance(self) -> float:
+        """Compute and return a tolerance value for the configured dataset and DDA.
+
+        Returns
+        -------
+        float
+            A tolerance value suitable for use as ``dda.tolerance``.
+        """
         pass # pragma: no cover, implemented in child classes
