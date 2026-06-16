@@ -239,17 +239,8 @@
         <article role="main" id="furo-main-content">
           <section id="quick-start">
 <h1>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading">¶</a></h1>
-<nav class="contents local" id="sections">
-<p class="topic-title">Sections</p>
-<ul class="simple">
-<li><p><a class="reference internal" href="#batch-deduplication" id="id1">Batch deduplication</a></p></li>
-<li><p><a class="reference internal" href="#single-vector-duplicate-check" id="id2">Single-vector duplicate check</a></p></li>
-<li><p><a class="reference internal" href="#streaming-incremental-ingestion" id="id3">Streaming / incremental ingestion</a></p></li>
-<li><p><a class="reference internal" href="#automatic-tolerance-tuning" id="id4">Automatic tolerance tuning</a></p></li>
-</ul>
-</nav>
 <section id="batch-deduplication">
-<h2><a class="toc-backref" href="#id1" role="doc-backlink">Batch deduplication</a><a class="headerlink" href="#batch-deduplication" title="Link to this heading">¶</a></h2>
+<h2>Batch deduplication<a class="headerlink" href="#batch-deduplication" title="Link to this heading">¶</a></h2>
 <p>Use <a class="reference internal" href="api/algorithms.html#deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix.DistanceMatrix" title="deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix.DistanceMatrix"><code class="xref py py-class docutils literal notranslate"><span class="pre">DistanceMatrix</span></code></a>
 to load a dataset and return only the unique vectors in a single call.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix</span><span class="w"> </span><span class="kn">import</span> <span class="n">DistanceMatrix</span>
@@ -263,7 +254,7 @@ to load a dataset and return only the unique vectors in a single call.</p>
 </div>
 </section>
 <section id="single-vector-duplicate-check">
-<h2><a class="toc-backref" href="#id2" role="doc-backlink">Single-vector duplicate check</a><a class="headerlink" href="#single-vector-duplicate-check" title="Link to this heading">¶</a></h2>
+<h2>Single-vector duplicate check<a class="headerlink" href="#single-vector-duplicate-check" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">duplicate_check()</span></code> is fast — it computes distances only for <code class="docutils literal notranslate"><span class="pre">input_vector</span></code>
 rather than rebuilding the full matrix.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">dda</span><span class="o">.</span><span class="n">input_vector</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">1.0</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">])</span>
@@ -273,7 +264,7 @@ rather than rebuilding the full matrix.</p>
 </div>
 </section>
 <section id="streaming-incremental-ingestion">
-<h2><a class="toc-backref" href="#id3" role="doc-backlink">Streaming / incremental ingestion</a><a class="headerlink" href="#streaming-incremental-ingestion" title="Link to this heading">¶</a></h2>
+<h2>Streaming / incremental ingestion<a class="headerlink" href="#streaming-incremental-ingestion" title="Link to this heading">¶</a></h2>
 <p><code class="docutils literal notranslate"><span class="pre">add_input_vector_to_dda()</span></code> appends <code class="docutils literal notranslate"><span class="pre">input_vector</span></code> to the dataset and
 incrementally updates auxiliary structures, avoiding a full rebuild on every
 insertion.</p>
@@ -288,7 +279,7 @@ insertion.</p>
 </div>
 </section>
 <section id="automatic-tolerance-tuning">
-<h2><a class="toc-backref" href="#id4" role="doc-backlink">Automatic tolerance tuning</a><a class="headerlink" href="#automatic-tolerance-tuning" title="Link to this heading">¶</a></h2>
+<h2>Automatic tolerance tuning<a class="headerlink" href="#automatic-tolerance-tuning" title="Link to this heading">¶</a></h2>
 <p>When you do not know a good <code class="docutils literal notranslate"><span class="pre">tolerance</span></code> value, use a
 <a class="reference internal" href="api/tolerance.html#deduplicate_lib.plugins.tolerance_calculators.perturbed_dataset_reclustering.PerturbedDatasetReclustering" title="deduplicate_lib.plugins.tolerance_calculators.perturbed_dataset_reclustering.PerturbedDatasetReclustering"><code class="xref py py-class docutils literal notranslate"><span class="pre">PerturbedDatasetReclustering</span></code></a>
 to find one automatically, then assign it back to the DDA.</p>

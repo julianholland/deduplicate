@@ -1,11 +1,6 @@
 Quick Start
 ===========
 
-.. contents:: Sections
-   :local:
-   :depth: 1
-
-
 Batch deduplication
 -------------------
 
