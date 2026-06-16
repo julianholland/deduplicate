@@ -11,7 +11,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/julianholland/deduplicate/actions/workflows/ci.yml/badge.svg)](https://github.com/julianholland/deduplicate/actions/workflows/ci.yml)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-<!-- [![Documentation Status](https://readthedocs.org/projects/alomancy/badge/?version=latest)](https://alomancy.readthedocs.io/en/latest/index.html) -->
+[![Documentation Status](https://readthedocs.org/projects/deduplicate-lib/badge/?version=latest)](https://deduplicate-lib.readthedocs.io/en/latest/)
 
 ## Key Features
 
@@ -29,24 +29,27 @@
 <!-- - Locality Sensitive Hashing (Fast, Accurate) -->
 
 ## Quick Start
-install using pip
+
 ```bash
 pip install deduplicate_lib
 ```
 
-load your data into python 
-
 ```python
-from deduplicate_lib.plugins.deduplication_algorithms.multi_hash import MultiHash
+from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import MultiHashing
+import numpy as np
 
-# define your paramerters in the MultiHash object
-dda=MultiHash(dataset_array=your_data_numpy_array)
+dataset = np.array([[1.0, 2.0], [1.01, 2.01], [5.0, 6.0]])
+dda = MultiHashing(tolerance=0.1, dataset_array=dataset)
 
-# return a list of all unique values
+# return unique vectors
 print(dda.deduplicate())
+
+# check a single vector against the dataset
+dda.input_vector = np.array([1.0, 2.0])
+print(dda.duplicate_check())  # True
 ```
 
-A more detailed example can be seen in the `examples` directory
+See the **[full documentation](https://deduplicate-lib.readthedocs.io)** for API reference, tolerance tuning, and more examples.
 
 ### Dependencies
 
@@ -121,6 +124,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Project Links
 
 - [GitHub Repository](https://github.com/julianholland/deduplicate)
+- [Documentation](https://deduplicate-lib.readthedocs.io)
 
 ## Project To-Do
 
@@ -129,6 +133,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [ ] Add benchmarks for time and robustness
 - [ ] Add Locality-Sensitive Hashing as an option
 - [x] Speedup slow tasks with Numba
-- [ ] Set up Read the Docs
+- [x] Set up Read the Docs
 - [x] Create general deduplicate function
 - [x] Speed up NTPP
