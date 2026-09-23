@@ -220,10 +220,10 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
                     f"Invalid condition '{condition}'. Must be one of 'longest', 'minimum', or 'maximum'."
                 )
             if condition == "minimum":
-                chosen_plateau = min(plateaus, key=lambda x: x[2])
+                chosen_plateau = min(plateaus, key=lambda x: x[0])
                 tolerance = chosen_plateau[0]
             elif condition == "maximum":
-                chosen_plateau = max(plateaus, key=lambda x: x[2])
+                chosen_plateau = max(plateaus, key=lambda x: x[0])
                 tolerance = chosen_plateau[1]
             else:  # condition == "longest"
                 chosen_plateau = max(plateaus, key=lambda x: x[2])
