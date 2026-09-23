@@ -110,7 +110,6 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
         unique_counts = [tolerance_results[tol] for tol in sorted_tols]
         total_gradient = (unique_counts[-1] - unique_counts[0]) / (sorted_tols[-1] - sorted_tols[0])
         relative_plateau_threshold = self.plateau_threshold * total_gradient
-        
         # detect plateaus by calculating the gradient of unique_counts with respect to tolerance and finding where it is close to zero
         plateau_log = np.zeros(len(sorted_tols) - self.datapoints_to_calculate_gradient, dtype=bool)
         gradient_log = np.zeros(len(sorted_tols) - self.datapoints_to_calculate_gradient)
@@ -130,7 +129,6 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
                             'gradients': list(gradient_log)}
 
         return plateau_log
-
 
     def find_plateaus(
         self,
@@ -181,9 +179,13 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
 
         return plateau_lengths
 
-    def calculate_tolerance(self) -> float:
+    def calculate_tolerance(self, condition: str = "longest") -> float:
         """Compute and return the midpoint of the longest plateau in the unique-count curve.
 
+        Parameters
+        ----------
+        condition : str, optional
+            Condition for selecting the plateau. Currently only supports "longest".
         Returns
         -------
         float
@@ -213,5 +215,17 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
             )
             return (all_same_tolerance + all_different_tolerance) / 2
         else:
-            longest_plateau = max(plateaus, key=lambda x: x[2])
-            return (longest_plateau[0] + longest_plateau[1]) / 2
+            if condition not in ["longest", "minimum", "maximum"]:
+                raise ValueError(
+                    f"Invalid condition '{condition}'. Must be one of 'longest', 'minimum', or 'maximum'."
+                )
+            if condition == "minimum":
+                chosen_plateau = min(plateaus, key=lambda x: x[2])
+                tolerance = chosen_plateau[0]
+            elif condition == "maximum":
+                chosen_plateau = max(plateaus, key=lambda x: x[2])
+                tolerance = chosen_plateau[1]
+            else:  # condition == "longest"
+                chosen_plateau = max(plateaus, key=lambda x: x[2])
+                tolerance = (chosen_plateau[0] + chosen_plateau[1]) / 2
+        return tolerance

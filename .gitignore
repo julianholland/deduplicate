@@ -1,2 +1,7 @@
 __pycache__/
 .ipynb_checkpoints/
+.venv/
+dist/
+build/
+*.egg-info/
+__pycache__/
