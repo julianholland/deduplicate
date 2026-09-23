@@ -207,3 +207,4 @@ def test_get_plateau_log(request, dda_fixture):
     assert isinstance(plateau_log, np.ndarray)
     assert plateau_log.dtype == bool
     assert len(plateau_log) == number_of_datapoints - 2
+

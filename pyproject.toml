@@ -3,7 +3,7 @@ name = "deduplicate_lib"
 dynamic = ["version"]
 description = "A Python package for deduplicating data."
 authors = [
-    { name="Julian Holland", email="holland@fhi.mpg.de" }
+    { name = "Julian Holland", email = "holland@fhi.mpg.de" },
 ]
 readme = "README.md"
 requires-python = ">=3.8"
@@ -12,12 +12,6 @@ dependencies = [
     "numba",
     "scipy",
 ]
-
-[tool.setuptools]
-package-dir = {"" = "src"}
-
-[tool.setuptools.dynamic]
-version = {attr = "deduplicate_lib.__version__"}
 
 [project.optional-dependencies]
 dev = [
@@ -29,12 +23,24 @@ dev = [
     "nbclient",
     "notebook",
     "ipykernel",
-    "matplotlib",]
+    "matplotlib",
+]
 docs = [
     "sphinx>=7",
     "furo",
     "sphinx-autodoc-typehints",
 ]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["deduplicate_lib*"]
+namespaces = false
+
+[tool.setuptools.dynamic]
+version = { attr = "deduplicate_lib.__version__" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
