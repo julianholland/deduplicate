@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [0.1.3] - 2026-10-12
 
 ### Changed
 - Packaging moved to uv + hatchling: dev/test dependencies are now PEP 735 dependency
@@ -36,6 +36,26 @@ All notable changes to this project are documented in this file.
   0.168 → 0.181 (reclustering) and 0.141 → 0.153 (plateau probe). At the old values,
   one point plus a 30-vector cluster deduplicated to the point alone; at the new
   values, to the point plus one cluster member.
+
+---
+
+## [0.1.2] - 2026-09-23
+
+### Fixed
+- `NaturalTolerancePlateauProbe`: fixed selection of the minimum/maximum plateau.
+
+---
+
+## [0.1.1] - 2026-09-23
+
+### Added
+- `NaturalTolerancePlateauProbe` can select the minimum or maximum plateau.
+
+---
+
+## [0.1.0] - 2026-06-14
+
+### Fixed
 - `MultiHashing.duplicate_check()` / `get_uniqueness_score()` no longer return stale results
   when `tolerance`, `seed`, or `perturbations` change after the hash dictionary was first
   built — `pre_dda_processing()` now detects these changes and forces a rebuild.

@@ -8,8 +8,10 @@ results are required.
 DistanceMatrix
 --------------
 
-Exact algorithm.  Builds the full N×N pairwise distance matrix and marks every
-vector whose nearest neighbour is within ``tolerance`` as a duplicate.  O(N²)
+Exact algorithm.  Builds the full N×N pairwise distance matrix.  Vectors are
+taken in dataset order, and a vector is a duplicate only if it is within
+``tolerance`` of a vector already kept, so each group of near-duplicates keeps
+exactly one vector (its earliest).  O(N²)
 time and space; a good choice for datasets up to ~5 000 vectors.  Supports all
 four distance metrics: ``"euclidean"``, ``"manhattan"``, ``"cosine"``, and
 ``"hamming"``.

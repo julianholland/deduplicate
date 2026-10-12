@@ -7,7 +7,7 @@
 [![GitHub](https://img.shields.io/badge/GitHub-Repository-black?logo=github)](https://github.com/julianholland/deduplicate)
 [![codecov](https://codecov.io/gh/julianholland/deduplicate/graph/badge.svg?token=JL3OTRCXZD)](https://codecov.io/gh/julianholland/deduplicate)
 [![PyPI version](https://badge.fury.io/py/deduplicate_lib.svg)](https://badge.fury.io/py/deduplicate_lib)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![CI](https://github.com/julianholland/deduplicate/actions/workflows/ci.yml/badge.svg)](https://github.com/julianholland/deduplicate/actions/workflows/ci.yml)
 [![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
@@ -53,7 +53,7 @@ See the **[full documentation](https://deduplicate-lib.readthedocs.io)** for API
 
 ### Dependencies
 
-- Python 3.9+
+- Python 3.10+
 - `numpy`
 - `numba`
 - `scipy`
