@@ -1,5 +1,8 @@
-import pytest
+import re
+
 import numpy as np
+import pytest
+
 from deduplicate_lib.plugins.tolerance_calculators.natural_tolerance_plateau_probe import (
     NaturalTolerancePlateauProbe,
 )
@@ -78,10 +81,7 @@ def test_find_plateaus(distance_matrix_dda):
         + [3] * (number_of_datapoints // 3)
         + [4] * (number_of_datapoints - 2 * (number_of_datapoints // 3))
     )
-    three_plateau_results = {
-        tol: unique_vectors
-        for tol, unique_vectors in zip(tol_values, three_plateau_unique_vectors)
-    }
+    three_plateau_results = dict(zip(tol_values, three_plateau_unique_vectors))
     no_plateau_results = {tol: i for i, tol in enumerate(tol_values)}
 
     tc.datapoints_to_calculate_gradient = 2
@@ -156,7 +156,9 @@ def test_calculate_tolerance(request, dda_fixture):
     tc.probe_steps = 1
     with pytest.raises(
         ValueError,
-        match="Not enough tolerance steps to calculate gradient with the given datapoints_to_calculate_gradient.",
+        match=re.escape(
+            "Not enough tolerance steps to calculate gradient with the given datapoints_to_calculate_gradient."
+        ),
     ):
         tc.calculate_tolerance()
 
@@ -188,14 +190,12 @@ def test_get_plateau_log(request, dda_fixture):
         + [3] * (number_of_datapoints // 3)
         + [4] * (number_of_datapoints - 2 * (number_of_datapoints // 3))
     )
-    three_plateau_results = {
-        tol: unique_vectors
-        for tol, unique_vectors in zip(tol_values, three_plateau_unique_vectors)
-    }
+    three_plateau_results = dict(zip(tol_values, three_plateau_unique_vectors))
 
     sorted_tols = sorted(three_plateau_results.keys())
     with pytest.raises(
-        ValueError, match="datapoints_to_calculate_gradient must be greater than 1."
+        ValueError,
+        match=re.escape("datapoints_to_calculate_gradient must be greater than 1."),
     ):
         tc.datapoints_to_calculate_gradient = 1
         tc.plateau_threshold = 0.1

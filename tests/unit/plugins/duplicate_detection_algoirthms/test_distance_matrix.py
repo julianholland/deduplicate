@@ -1,8 +1,9 @@
+import numpy as np
+import pytest
+
 from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import (
     DistanceMatrix,
 )
-import numpy as np
-import pytest
 
 
 def test_str_representation():

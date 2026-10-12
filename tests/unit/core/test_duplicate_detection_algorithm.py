@@ -1,15 +1,15 @@
-import pytest
+import re
+
 import numpy as np
+import pytest
+
 from deduplicate_lib.core.duplicate_detection_algorithm import (
     DuplicateDetectionAlgorithm,
-)
-import re
-from deduplicate_lib.core.duplicate_detection_algorithm import (
-    fast_compute_distance_matrix,
-    euclidean_distance,
-    manhattan_distance,
-    hamming_distance,
     cosine_distance,
+    euclidean_distance,
+    fast_compute_distance_matrix,
+    hamming_distance,
+    manhattan_distance,
 )
 
 
@@ -32,7 +32,9 @@ def test_dataset_array_setter(dummy_dda):
     new_dataset = np.array([[1.0, 2.0], [3.0, 4.0]])
     with pytest.raises(
         AttributeError,
-        match="Cannot assign to 'dataset_array' directly; use set_dataset_array(...).",
+        match=re.escape(
+            "Cannot assign to 'dataset_array' directly; use set_dataset_array(...)."
+        ),
     ):
         dummy_dda.dataset_array = new_dataset
 
@@ -242,7 +244,8 @@ def test_set_dataset_array_with_valid_input(dummy_dda):
 def test_set_dataset_array_with_excess_size(dummy_dda):
     new_dataset = np.zeros((dummy_dda.max_vector_array_size + 1, 2))
     with pytest.raises(
-        ValueError, match="New dataset array size exceeds maximum allowed size."
+        ValueError,
+        match=re.escape("New dataset array size exceeds maximum allowed size."),
     ):
         dummy_dda.set_dataset_array(new_dataset)
 

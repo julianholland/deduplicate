@@ -1,10 +1,12 @@
-import numpy as np
+import warnings
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
+
+import numpy as np
+
 from deduplicate_lib.core.duplicate_detection_algorithm import (
     DuplicateDetectionAlgorithm,
 )
-from contextlib import contextmanager
-import warnings
 
 
 class ToleranceCalculator(ABC):
@@ -52,7 +54,8 @@ class ToleranceCalculator(ABC):
         results_dict = {}
         if self.binary_search_steps <= 0:
             warnings.warn(
-                f"Binary search called with {self.binary_search_steps} steps. No binary search performed.\n Returning tolerance of half the range of the perturbed dataset: {tolerance}."
+                f"Binary search called with {self.binary_search_steps} steps. No binary search performed.\n Returning tolerance of half the range of the perturbed dataset: {tolerance}.",
+                stacklevel=2,
             )
             return tolerance
 
@@ -106,13 +109,14 @@ class ToleranceCalculator(ABC):
                 key=lambda tol: abs(results_dict[tol] - target_unique_vectors),
             )
             min_diff = results_dict[closest_tol] - target_unique_vectors
-            tolerance = [
+            tolerance = next(
                 tol
                 for tol, unique_vectors in results_dict.items()
                 if unique_vectors == target_unique_vectors + min_diff
-            ][0]
+            )
             warnings.warn(
-                f"No exact tolerance found for target of {target_unique_vectors} unique vectors during binary search.\n Returning closest tolerance found: {tolerance} with {results_dict[tolerance]} unique vectors."
+                f"No exact tolerance found for target of {target_unique_vectors} unique vectors during binary search.\n Returning closest tolerance found: {tolerance} with {results_dict[tolerance]} unique vectors.",
+                stacklevel=2,
             )
         return tolerance
 
@@ -157,7 +161,8 @@ class ToleranceCalculator(ABC):
             and self.perturbations_per_vector > 1
         ):
             warnings.warn(
-                "Perturbed dataset is not properly initialized. Recreating it.\nEnsure a perturbed dataset is set prior finding tolerance."
+                "Perturbed dataset is not properly initialized. Recreating it.\nEnsure a perturbed dataset is set prior finding tolerance.",
+                stacklevel=2,
             )
             self.create_perturbed_dataset()
 

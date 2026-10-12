@@ -1,12 +1,13 @@
-from nbclient import NotebookClient
 import nbformat
+import numpy as np
+from nbclient import NotebookClient
+
 from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
     MultiHashing,
 )
 from deduplicate_lib.plugins.tolerance_calculators.natural_tolerance_plateau_probe import (
     NaturalTolerancePlateauProbe,
 )
-import numpy as np
 
 
 def test_multi_hashing_example_notebook_runs():

@@ -1,15 +1,16 @@
+import numpy as np
+
 from deduplicate_lib.core.duplicate_detection_algorithm import (
     DuplicateDetectionAlgorithm,
 )
 from deduplicate_lib.core.plugin_registry import register_plugin
-import numpy as np
 
 
 @register_plugin(kind="duplicate_detection_algorithm", name="distance_matrix")
 class DistanceMatrix(DuplicateDetectionAlgorithm):
     """Exact deduplication using a full pairwise distance matrix.
 
-    Computes all N×N pairwise distances.  Vectors are taken in dataset order:
+    Computes all NxN pairwise distances.  Vectors are taken in dataset order:
     each one is kept as unique unless it is within ``tolerance`` of a vector
     already kept, so every group of near-duplicates keeps exactly one vector
     (its earliest) and the rest are flagged.  O(N²) time and space;

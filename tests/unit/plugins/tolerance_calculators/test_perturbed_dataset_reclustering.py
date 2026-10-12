@@ -1,9 +1,11 @@
-import pytest
+import re
+
 import numpy as np
+import pytest
+
 from deduplicate_lib.plugins.tolerance_calculators.perturbed_dataset_reclustering import (
     PerturbedDatasetReclustering,
 )
-import re
 
 
 def test_str_representation(distance_matrix_dda):

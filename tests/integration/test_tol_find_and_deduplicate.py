@@ -1,5 +1,6 @@
-import pytest
 import numpy as np
+import pytest
+
 from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import (
     DistanceMatrix,
 )

@@ -1,5 +1,6 @@
-import numpy as np
 from abc import ABC, abstractmethod
+
+import numpy as np
 from numba import njit
 
 
@@ -203,7 +204,7 @@ class DuplicateDetectionAlgorithm(ABC):
             constant_values=0,
         )
 
-    def pre_dda_processing(self, *args, **kwargs) -> None:
+    def pre_dda_processing(self) -> None:
         """Ensure the dataset array and any algorithm-specific auxiliary structures (e.g. distance matrix, hash dictionary) are preallocated and up to date before duplication checks.
 
         This is idempotent: auxiliary structures are only rebuilt via `_rebuild_auxiliary_structures()` if the dataset has changed (`_dirty`) since they were last built. Child classes should implement `_rebuild_auxiliary_structures()` rather than overriding this method.
@@ -213,7 +214,7 @@ class DuplicateDetectionAlgorithm(ABC):
             self._rebuild_auxiliary_structures()
             self._dirty = False
 
-    def _rebuild_auxiliary_structures(self) -> None:
+    def _rebuild_auxiliary_structures(self) -> None:  # noqa: B027 (optional hook)
         """Rebuild any algorithm-specific auxiliary structures from the current dataset array. Overridden by child classes."""
         pass
 
@@ -228,7 +229,7 @@ class DuplicateDetectionAlgorithm(ABC):
         self.pre_dda_processing()
         self._append_vector_to_structures()
 
-    def _append_vector_to_structures(self) -> None:
+    def _append_vector_to_structures(self) -> None:  # noqa: B027 (optional hook)
         """Append `input_vector` to the dataset array and incrementally update any auxiliary structures. Overridden by child classes."""
         pass
 

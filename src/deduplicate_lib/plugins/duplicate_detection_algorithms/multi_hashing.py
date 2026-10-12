@@ -1,12 +1,14 @@
+import warnings
+from typing import ClassVar
+
+import numpy as np
+from numba import njit
+
 from deduplicate_lib.core.duplicate_detection_algorithm import (
     DuplicateDetectionAlgorithm,
     hamming_distance,
 )
 from deduplicate_lib.core.plugin_registry import register_plugin
-
-import numpy as np
-import warnings
-from numba import njit
 
 
 @njit
@@ -56,7 +58,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
     distance_metric : str, optional
         Must be ``"hamming"``.
     sigma_accepatnce_threshold : int, optional
-        Controls the acceptance band (1–4):
+        Controls the acceptance band (1-4):
 
         ======  ================
         Value   Acceptance band
@@ -77,7 +79,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         Defaults to 10000.
     """
 
-    ALLOWED_DISTANCES = {"hamming": hamming_distance}
+    ALLOWED_DISTANCES: ClassVar[dict] = {"hamming": hamming_distance}
 
     def __init__(
         self,
@@ -124,7 +126,8 @@ class MultiHashing(DuplicateDetectionAlgorithm):
 
         if self.perturbation_array.shape[0] != self.perturbations:
             warnings.warn(
-                "Perturbation array shape does not match expected number of perturbations; recomputing. \nAssign the perturbation array prior duplication checks to avoid this warning."
+                "Perturbation array shape does not match expected number of perturbations; recomputing. \nAssign the perturbation array prior duplication checks to avoid this warning.",
+                stacklevel=2,
             )
             self.set_perturbation_array()
 
@@ -148,7 +151,8 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             and self.sigma_accepatnce_threshold > 1
         ):
             warnings.warn(
-                f"Sigma acceptance threshold of {self.sigma_accepatnce_threshold} corresponds to an acceptance threshold of {sigma_dict[self.sigma_accepatnce_threshold]} which may be too high for the number of perturbations ({self.perturbations}) and could lead to false positives. Consider lowering the sigma acceptance threshold or increasing the number of perturbations to over {int(np.ceil(1 / (1 - sigma_dict[self.sigma_accepatnce_threshold])))}."
+                f"Sigma acceptance threshold of {self.sigma_accepatnce_threshold} corresponds to an acceptance threshold of {sigma_dict[self.sigma_accepatnce_threshold]} which may be too high for the number of perturbations ({self.perturbations}) and could lead to false positives. Consider lowering the sigma acceptance threshold or increasing the number of perturbations to over {int(np.ceil(1 / (1 - sigma_dict[self.sigma_accepatnce_threshold])))}.",
+                stacklevel=2,
             )
 
         self.acceptance_threshold = sigma_dict[self.sigma_accepatnce_threshold]
@@ -208,7 +212,8 @@ class MultiHashing(DuplicateDetectionAlgorithm):
     def warn_if_vector_dict_mismatch(self, hash_vector: np.ndarray):
         if len(self.hash_dict) != len(hash_vector):
             warnings.warn(
-                "Hash vector dictionary length does not match number of perturbations; recomputing. \nAssign the perturbation array and compute the hash vector dictionary prior to duplication checks to avoid this warning."
+                "Hash vector dictionary length does not match number of perturbations; recomputing. \nAssign the perturbation array and compute the hash vector dictionary prior to duplication checks to avoid this warning.",
+                stacklevel=2,
             )
             self.compute_hash_vector_dictionary()
 
@@ -292,13 +297,13 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             0
         ] != self.perturbations or self.seed != getattr(self, "_hash_dict_seed", None)
 
-    def pre_dda_processing(self, *args, **kwargs) -> None:
+    def pre_dda_processing(self) -> None:
         if (
             self.tolerance != getattr(self, "_hash_dict_tolerance", None)
             or self._perturbation_array_stale()
         ):
             self._dirty = True
-        super().pre_dda_processing(*args, **kwargs)
+        super().pre_dda_processing()
 
     def _rebuild_auxiliary_structures(self) -> None:
         if self._perturbation_array_stale():

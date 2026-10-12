@@ -1,5 +1,6 @@
-import pytest
 import numpy as np
+import pytest
+
 from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
 
 

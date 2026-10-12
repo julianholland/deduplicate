@@ -1,14 +1,15 @@
 # tests/test_registry.py
+import numpy as np
 import pytest
-from deduplicate_lib.core.plugin_registry import (
-    register_plugin,
-    create_plugin,
-    get_plugin_class,
-)
+
 from deduplicate_lib.core.duplicate_detection_algorithm import (
     DuplicateDetectionAlgorithm,
 )
-import numpy as np
+from deduplicate_lib.core.plugin_registry import (
+    create_plugin,
+    get_plugin_class,
+    register_plugin,
+)
 
 
 def test_register_and_retrieve():

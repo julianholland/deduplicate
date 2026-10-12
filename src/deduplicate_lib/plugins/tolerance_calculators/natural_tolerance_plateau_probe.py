@@ -1,10 +1,12 @@
-from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
+import warnings
+
+import numpy as np
+
 from deduplicate_lib.core.duplicate_detection_algorithm import (
     DuplicateDetectionAlgorithm,
 )
 from deduplicate_lib.core.plugin_registry import register_plugin
-import numpy as np
-import warnings
+from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
 
 
 @register_plugin("tolerance_calculator", "natural_tolerance_plateau_probe")
@@ -235,7 +237,8 @@ class NaturalTolerancePlateauProbe(ToleranceCalculator):
         plateaus = self.find_plateaus(probe_results)
         if len(plateaus) == 0:
             warnings.warn(
-                "No plateaus found in tolerance probe. Consider adding in perturbed structures and/or increasing dataset size and/or increaseing probe steps.\nReturning average of all same and all different tolerance as fallback."
+                "No plateaus found in tolerance probe. Consider adding in perturbed structures and/or increasing dataset size and/or increaseing probe steps.\nReturning average of all same and all different tolerance as fallback.",
+                stacklevel=2,
             )
             return (all_same_tolerance + all_different_tolerance) / 2
         else:

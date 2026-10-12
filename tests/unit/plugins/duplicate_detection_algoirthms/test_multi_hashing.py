@@ -1,14 +1,13 @@
+import copy
 import re
+
+import numpy as np
+import pytest
 
 from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
     MultiHashing,
-)
-from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
     fast_round_and_perturb,
 )
-import numpy as np
-import pytest
-import copy
 
 
 def test_fast_round_and_perturb_numba():

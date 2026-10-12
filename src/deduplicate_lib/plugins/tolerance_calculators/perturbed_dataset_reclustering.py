@@ -1,9 +1,10 @@
-from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
+import numpy as np
+
 from deduplicate_lib.core.duplicate_detection_algorithm import (
     DuplicateDetectionAlgorithm,
 )
 from deduplicate_lib.core.plugin_registry import register_plugin
-import numpy as np
+from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
 
 
 @register_plugin("tolerance_calculator", "perturbed_dataset_reclustering")

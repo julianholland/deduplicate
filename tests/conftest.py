@@ -1,6 +1,7 @@
 # tests/conftest.py
-import pytest
 import numpy as np
+import pytest
+
 from deduplicate_lib.core.duplicate_detection_algorithm import (
     DuplicateDetectionAlgorithm,
 )
