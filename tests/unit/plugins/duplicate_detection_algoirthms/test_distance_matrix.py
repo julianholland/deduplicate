@@ -4,6 +4,7 @@ from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix impo
 import numpy as np
 import pytest
 
+
 def test_str_representation():
     dda = DistanceMatrix(
         tolerance=0.1,
@@ -13,6 +14,7 @@ def test_str_representation():
         distance_metric="euclidean",
     )
     assert str(dda) == "DistanceMatrix(tolerance=0.1, distance_metric=euclidean)"
+
 
 def test_duplicate_check():
     dda = DistanceMatrix(
@@ -26,6 +28,7 @@ def test_duplicate_check():
 
     dda.input_vector = np.array([10.0, 20.0])
     assert not dda.duplicate_check()
+
 
 def test_duplicate_check_does_not_build_distance_matrix():
     dda = DistanceMatrix(
@@ -52,18 +55,25 @@ def test_duplicate_check_if_distance_matrix_wrong_shape():
         distance_matrix=np.array([1.0]),  # will be computed
         distance_metric="euclidean",
     )
-    pytest.warns(UserWarning, match="Distance matrix shape does not match dataset; recomputing.")
+    pytest.warns(
+        UserWarning, match="Distance matrix shape does not match dataset; recomputing."
+    )
     assert dda.duplicate_check()
 
+
 def test_get_dataset_unique_structures():
-    
-    dm=np.array([[0.00000000e+00, 1.41421356e-02, 2.01246118e+01],
-                 [1.41421356e-02, 0.00000000e+00, 2.01111959e+01],
-                 [2.01246118e+01, 2.01111959e+01, 0.00000000e+00]]) # precomputed distance matrix for the dataset_array below
-    
+
+    dm = np.array(
+        [
+            [0.00000000e00, 1.41421356e-02, 2.01246118e01],
+            [1.41421356e-02, 0.00000000e00, 2.01111959e01],
+            [2.01246118e01, 2.01111959e01, 0.00000000e00],
+        ]
+    )  # precomputed distance matrix for the dataset_array below
+
     dda = DistanceMatrix(
         tolerance=0.1,
-        input_vector=np.array([0.0, 0.0]), # not used here
+        input_vector=np.array([0.0, 0.0]),  # not used here
         dataset_array=np.array([[1.0, 2.0], [1.01, 2.01], [10.0, 20.0]]),
         distance_matrix=dm,
         distance_metric="euclidean",
@@ -72,10 +82,14 @@ def test_get_dataset_unique_structures():
     print(dda.distance_matrix > 0.1)
     assert unique_count == 2
 
+
 def test_pre_dda_processing(distance_matrix_dda):
     dda = distance_matrix_dda
     dda.pre_dda_processing()
-    assert dda.distance_matrix.shape[0] == dda.dataset_array.shape[0]  # should have computed the distance matrix to match the dataset shape
+    assert (
+        dda.distance_matrix.shape[0] == dda.dataset_array.shape[0]
+    )  # should have computed the distance matrix to match the dataset shape
+
 
 def test_add_input_vector_to_dda(distance_matrix_dda):
     dda = distance_matrix_dda
@@ -99,6 +113,7 @@ def test_add_input_vector_to_dda_without_prior_pre_dda_processing():
     assert dda.get_filled_dataset_array().shape[0] == initial_dataset_size + 1
     assert np.array_equal(dda.get_filled_dataset_array()[-1], dda.input_vector)
     assert dda.get_filled_distance_matrix().shape[0] == initial_dataset_size + 1
+
 
 def _unique_indices(data, tolerance):
     data = np.asarray(data, dtype=float)
@@ -147,9 +162,7 @@ def test_agrees_with_multi_hashing_on_separated_clusters():
 
     rng = np.random.default_rng(803)
     centres = rng.uniform(0, 10, size=(6, 4))
-    data = np.vstack(
-        [centre + rng.normal(0, 1e-4, size=(5, 4)) for centre in centres]
-    )
+    data = np.vstack([centre + rng.normal(0, 1e-4, size=(5, 4)) for centre in centres])
     order = rng.permutation(len(data))
     data = data[order]
     first_of_each_cluster = sorted(

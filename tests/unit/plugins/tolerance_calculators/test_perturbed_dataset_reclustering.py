@@ -5,6 +5,7 @@ from deduplicate_lib.plugins.tolerance_calculators.perturbed_dataset_reclusterin
 )
 import re
 
+
 def test_str_representation(distance_matrix_dda):
     dda = distance_matrix_dda
     assert (
@@ -18,10 +19,8 @@ def test_str_representation(distance_matrix_dda):
         == f"PerturbedDatasetReclustering(perturbations_per_vector=1000, perturbation_scale=0.1, dda={str(dda).split('(')[0]})"
     )
 
-@pytest.mark.parametrize(
-    "dda_fixture",
-    ["distance_matrix_dda", "multi_hashing_dda"]
-)
+
+@pytest.mark.parametrize("dda_fixture", ["distance_matrix_dda", "multi_hashing_dda"])
 def test_calculate_tolerance(request, dda_fixture):
     # create distance matrix dda
     dda = request.getfixturevalue(dda_fixture)
@@ -38,7 +37,7 @@ def test_calculate_tolerance(request, dda_fixture):
 
         # generate rattled data and compute distance matrix
         tc.create_perturbed_dataset()
-    
+
         # use these to calculate the tolerance
         tolerance = tc.calculate_tolerance()
         print(f"Calculated {threshold_type} tolerance: {tolerance}")
@@ -46,13 +45,19 @@ def test_calculate_tolerance(request, dda_fixture):
         assert isinstance(tolerance, float)
         assert tolerance > 0.0
         tc.duplicate_detection_algorithm_object.tolerance = tolerance
-        old_dataset_array = tc.duplicate_detection_algorithm_object.get_filled_dataset_array()
-        tc.duplicate_detection_algorithm_object.set_dataset_array(tc.tolerance_dataset_array)
+        old_dataset_array = (
+            tc.duplicate_detection_algorithm_object.get_filled_dataset_array()
+        )
+        tc.duplicate_detection_algorithm_object.set_dataset_array(
+            tc.tolerance_dataset_array
+        )
         unique_vectors = (
             tc.duplicate_detection_algorithm_object.get_dataset_unique_structures()
         )
         tc.duplicate_detection_algorithm_object.set_dataset_array(old_dataset_array)
-        assert unique_vectors == len(tc.duplicate_detection_algorithm_object.get_filled_dataset_array())
+        assert unique_vectors == len(
+            tc.duplicate_detection_algorithm_object.get_filled_dataset_array()
+        )
 
         return tolerance
 
@@ -63,6 +68,7 @@ def test_calculate_tolerance(request, dda_fixture):
     assert loose_tolerance > average_tolerance
     assert tight_tolerance < average_tolerance
     assert tight_tolerance < loose_tolerance
+
 
 def test_initialize_with_target_unique_vectors(distance_matrix_dda):
     dda = distance_matrix_dda
@@ -76,11 +82,11 @@ def test_initialize_with_target_unique_vectors(distance_matrix_dda):
     )
     assert tc.target_unique_vectors == target_unique_vectors
 
-@pytest.mark.parametrize(
-    "dda_fixture",
-    ["distance_matrix_dda", "multi_hashing_dda"]
-)
-def test_calculate_tolerance_with_insufficient_binary_search_steps(request, dda_fixture):
+
+@pytest.mark.parametrize("dda_fixture", ["distance_matrix_dda", "multi_hashing_dda"])
+def test_calculate_tolerance_with_insufficient_binary_search_steps(
+    request, dda_fixture
+):
     # create distance matrix dda
     dda = request.getfixturevalue(dda_fixture)
 
@@ -97,7 +103,7 @@ def test_calculate_tolerance_with_insufficient_binary_search_steps(request, dda_
         np.ptp(tc.tolerance_dataset_array)
         + np.mean(np.std(tc.tolerance_dataset_array, axis=0))
     ) * tc.duplicate_detection_algorithm_object.dataset_array.shape[1]
-    
+
     with pytest.warns(
         UserWarning,
         match=(
@@ -106,9 +112,11 @@ def test_calculate_tolerance_with_insufficient_binary_search_steps(request, dda_
         ),
     ):
         print(tc.calculate_tolerance())
-   
 
-def test_calculate_tolerance_raises_for_invalid_target_unique_vectors_threshold(distance_matrix_dda, monkeypatch):
+
+def test_calculate_tolerance_raises_for_invalid_target_unique_vectors_threshold(
+    distance_matrix_dda, monkeypatch
+):
     tc = PerturbedDatasetReclustering(
         duplicate_detection_algorithm_object=distance_matrix_dda,
         target_unique_vectors_threshold="invalid_mode",
@@ -122,6 +130,7 @@ def test_calculate_tolerance_raises_for_invalid_target_unique_vectors_threshold(
         match=r"Invalid target_unique_vectors_threshold: invalid_mode\. Must be 'average', 'loose', or 'tight'\.",
     ):
         tc.calculate_tolerance()
+
 
 # def test_calculate_tolerance_with_no_vector_count(distance_matrix_dda, monkeypatch):
 #     tc = PerturbedDatasetReclustering(

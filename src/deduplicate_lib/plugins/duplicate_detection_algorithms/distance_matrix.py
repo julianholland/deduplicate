@@ -1,6 +1,9 @@
-from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
+from deduplicate_lib.core.duplicate_detection_algorithm import (
+    DuplicateDetectionAlgorithm,
+)
 from deduplicate_lib.core.plugin_registry import register_plugin
 import numpy as np
+
 
 @register_plugin(kind="duplicate_detection_algorithm", name="distance_matrix")
 class DistanceMatrix(DuplicateDetectionAlgorithm):
@@ -45,7 +48,13 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
         max_vector_array_size: int = 10000,
     ) -> None:
         super().__init__(
-            tolerance, input_vector, dataset_array, distance_matrix, distance_metric, unique_vector_indices, max_vector_array_size
+            tolerance,
+            input_vector,
+            dataset_array,
+            distance_matrix,
+            distance_metric,
+            unique_vector_indices,
+            max_vector_array_size,
         )
 
     def __str__(self) -> str:
