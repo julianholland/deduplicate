@@ -1,11 +1,12 @@
-import pytest
 import numpy as np
+import pytest
+
 from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
 
 
 def test_cannot_instantiate_abc():
     with pytest.raises(TypeError):
-        ToleranceCalculator() # type: ignore
+        ToleranceCalculator()  # type: ignore
 
 
 def test_calculate_tolerance(dummy_tolerance_calculator):
@@ -29,7 +30,9 @@ def test_create_perturbed_dataset(dummy_tolerance_calculator):
                 1
             ]
         )
-        print(dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape)
+        print(
+            dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape
+        )
         std_dev_of_perturbations = np.std(
             dummy_tolerance_calculator.tolerance_dataset_array
             - np.repeat(
@@ -118,9 +121,16 @@ def test_binary_search_tolerance(dummy_tolerance_calculator):
     dummy_tolerance_calculator.binary_search_steps = 0
     dummy_tolerance_calculator.create_perturbed_dataset(seed=803)
     original_best_max = (
-        np.ptp(dummy_tolerance_calculator.tolerance_dataset_array)
-        + np.mean(np.std(dummy_tolerance_calculator.tolerance_dataset_array, axis=0))
-    ) * dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape[1]
+        (
+            np.ptp(dummy_tolerance_calculator.tolerance_dataset_array)
+            + np.mean(
+                np.std(dummy_tolerance_calculator.tolerance_dataset_array, axis=0)
+            )
+        )
+        * dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape[
+            1
+        ]
+    )
     # expected_tolerance_no_search = (
     #     np.ptp(dummy_tolerance_calculator.tolerance_dataset_array) / 2
     # )
@@ -139,4 +149,3 @@ def test_binary_search_tolerance(dummy_tolerance_calculator):
     dummy_tolerance_calculator.binary_search_steps = 1
     for seed in list(range(803, 1000)):
         run_per_seed(seed, original_best_max)
-

@@ -69,15 +69,15 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 git clone https://github.com/julianholland/deduplicate.git
 cd deduplicate
 
-# Install in development mode
-pip install -e ".[dev]"
+# Create a virtual environment with the package and dev dependencies (needs uv)
+uv sync
 
 # Run tests
-pytest
+uv run pytest
 
 # Run linting
-ruff check .
-ruff format .
+uv run ruff check .
+uv run ruff format .
 ```
 
 ### Running Tests

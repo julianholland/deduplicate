@@ -1,18 +1,23 @@
-import numpy as np
 from abc import ABC, abstractmethod
+
+import numpy as np
 from numba import njit
 
 
 @njit
 def fast_compute_distance_matrix(vector_array, distance_func):
-    num_samples = vector_array.shape[0] # pragma: no cover, tested but does not appear in coverage report due to numba jit compilation
-    distance_matrix = np.zeros((num_samples, num_samples)) # pragma: no cover
-    for i in range(num_samples): # pragma: no cover
-        for j in range(i + 1, num_samples): # pragma: no cover
-            distance = distance_func(vector_array[i], vector_array[j]) # pragma: no cover
-            distance_matrix[i, j] = distance # pragma: no cover
-            distance_matrix[j, i] = distance # pragma: no cover
-    return distance_matrix # pragma: no cover
+    num_samples = vector_array.shape[
+        0
+    ]  # pragma: no cover, tested but does not appear in coverage report due to numba jit compilation
+    distance_matrix = np.zeros((num_samples, num_samples))  # pragma: no cover
+    for i in range(num_samples):  # pragma: no cover
+        for j in range(i + 1, num_samples):  # pragma: no cover
+            distance = distance_func(
+                vector_array[i], vector_array[j]
+            )  # pragma: no cover
+            distance_matrix[i, j] = distance  # pragma: no cover
+            distance_matrix[j, i] = distance  # pragma: no cover
+    return distance_matrix  # pragma: no cover
 
 
 @njit
@@ -24,32 +29,36 @@ def fast_get_new_distance_matrix_column(
     Returns:
         np.ndarray: A 1D array containing the distances from the input vector to each vector in the dataset.
     """
-    num_samples = vector_array.shape[0] # pragma: no cover
-    new_distances = np.zeros(num_samples) # pragma: no cover
-    for i in range(num_samples): # pragma: no cover
-        new_distances[i] = distance_func(input_vector, vector_array[i]) # pragma: no cover
-    return new_distances # pragma: no cover
+    num_samples = vector_array.shape[0]  # pragma: no cover
+    new_distances = np.zeros(num_samples)  # pragma: no cover
+    for i in range(num_samples):  # pragma: no cover
+        new_distances[i] = distance_func(
+            input_vector, vector_array[i]
+        )  # pragma: no cover
+    return new_distances  # pragma: no cover
 
 
 # must be jit compatible functions, so defined outside of the class and not as static methods
 @njit
 def euclidean_distance(v1, v2):
-    return float(np.linalg.norm(v1 - v2)) # pragma: no cover
+    return float(np.linalg.norm(v1 - v2))  # pragma: no cover
 
 
 @njit
 def manhattan_distance(v1, v2):
-    return np.sum(np.abs(v1 - v2)) # pragma: no cover
+    return np.sum(np.abs(v1 - v2))  # pragma: no cover
 
 
 @njit
 def cosine_distance(v1, v2):
-    return 1 - np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))  # pragma: no cover
+    return 1 - np.dot(v1, v2) / (
+        np.linalg.norm(v1) * np.linalg.norm(v2)
+    )  # pragma: no cover
 
 
 @njit
 def hamming_distance(v1, v2):
-    return np.sum(v1 != v2) # pragma: no cover
+    return np.sum(v1 != v2)  # pragma: no cover
 
 
 DISTANCE_FUNCTIONS = {
@@ -112,8 +121,10 @@ class DuplicateDetectionAlgorithm(ABC):
     ) -> None:
         self.tolerance = tolerance
         self.input_vector = input_vector
-        self._dataset_array = np.array([])  # will be initialized properly in preinitialize_dataset_array
-        
+        self._dataset_array = np.array(
+            []
+        )  # will be initialized properly in preinitialize_dataset_array
+
         self.distance_matrix = distance_matrix
         self.distance_metric = distance_metric
         self.unique_vector_indices = unique_vector_indices
@@ -128,14 +139,14 @@ class DuplicateDetectionAlgorithm(ABC):
         view = self._dataset_array.view()
         view.flags.writeable = False
         return view
-    
+
     @dataset_array.setter
     def dataset_array(self, _value: np.ndarray) -> None:
         raise AttributeError(
             "Cannot assign to 'dataset_array' directly; use set_dataset_array(...)."
         )
-    
-    def _set_dataset_array_internal(self, arr:np.ndarray) -> None:
+
+    def _set_dataset_array_internal(self, arr: np.ndarray) -> None:
         self._dataset_array = arr
 
     @property
@@ -163,8 +174,10 @@ class DuplicateDetectionAlgorithm(ABC):
         if vector_array is None:
             vector_array = self._dataset_array
 
-        self.distance_matrix[: self.vector_count, : self.vector_count] = fast_compute_distance_matrix(
-            vector_array[: self.vector_count], self.distance_function
+        self.distance_matrix[: self.vector_count, : self.vector_count] = (
+            fast_compute_distance_matrix(
+                vector_array[: self.vector_count], self.distance_function
+            )
         )
 
     def get_new_distance_matrix_column(self, vector_array: np.ndarray) -> np.ndarray:
@@ -180,11 +193,18 @@ class DuplicateDetectionAlgorithm(ABC):
     def add_new_vector_to_distance_matrix(self, vector_array: np.ndarray) -> None:
         """Add a new input vector to the distance matrix."""
         new_distances = self.get_new_distance_matrix_column(vector_array)
-        self.distance_matrix[self.vector_count] = np.pad(new_distances, (0, self.max_vector_array_size - len(new_distances)), constant_values=0)
-        self.distance_matrix[:, self.vector_count] = np.pad(new_distances, (0, self.max_vector_array_size - len(new_distances)), constant_values=0)
-        
+        self.distance_matrix[self.vector_count] = np.pad(
+            new_distances,
+            (0, self.max_vector_array_size - len(new_distances)),
+            constant_values=0,
+        )
+        self.distance_matrix[:, self.vector_count] = np.pad(
+            new_distances,
+            (0, self.max_vector_array_size - len(new_distances)),
+            constant_values=0,
+        )
 
-    def pre_dda_processing(self, *args, **kwargs) -> None:
+    def pre_dda_processing(self) -> None:
         """Ensure the dataset array and any algorithm-specific auxiliary structures (e.g. distance matrix, hash dictionary) are preallocated and up to date before duplication checks.
 
         This is idempotent: auxiliary structures are only rebuilt via `_rebuild_auxiliary_structures()` if the dataset has changed (`_dirty`) since they were last built. Child classes should implement `_rebuild_auxiliary_structures()` rather than overriding this method.
@@ -194,7 +214,7 @@ class DuplicateDetectionAlgorithm(ABC):
             self._rebuild_auxiliary_structures()
             self._dirty = False
 
-    def _rebuild_auxiliary_structures(self) -> None:
+    def _rebuild_auxiliary_structures(self) -> None:  # noqa: B027 (optional hook)
         """Rebuild any algorithm-specific auxiliary structures from the current dataset array. Overridden by child classes."""
         pass
 
@@ -209,7 +229,7 @@ class DuplicateDetectionAlgorithm(ABC):
         self.pre_dda_processing()
         self._append_vector_to_structures()
 
-    def _append_vector_to_structures(self) -> None:
+    def _append_vector_to_structures(self) -> None:  # noqa: B027 (optional hook)
         """Append `input_vector` to the dataset array and incrementally update any auxiliary structures. Overridden by child classes."""
         pass
 
@@ -235,16 +255,20 @@ class DuplicateDetectionAlgorithm(ABC):
         ensure auxiliary structures are up to date before selecting unique rows.
         """
         return self.dataset_array[self.get_unique_vector_indices()]
-    
+
     def initialize_dataset_array(self, vector_length: int) -> None:
-        self._set_dataset_array_internal(np.zeros((self.max_vector_array_size, vector_length)))
+        self._set_dataset_array_internal(
+            np.zeros((self.max_vector_array_size, vector_length))
+        )
 
     def initialize_distance_matrix(self) -> None:
-        self.distance_matrix = np.zeros((self.max_vector_array_size, self.max_vector_array_size))
-    
+        self.distance_matrix = np.zeros(
+            (self.max_vector_array_size, self.max_vector_array_size)
+        )
+
     def get_filled_dataset_array(self) -> np.ndarray:
         return self._dataset_array[: self.vector_count]
-    
+
     def get_filled_distance_matrix(self) -> np.ndarray:
         return self.distance_matrix[: self.vector_count, : self.vector_count]
 
@@ -259,7 +283,7 @@ class DuplicateDetectionAlgorithm(ABC):
 
         if new_dataset_array.shape[0] > self.max_vector_array_size:
             raise ValueError("New dataset array size exceeds maximum allowed size.")
-        
+
         self.vector_count = new_dataset_array.shape[0]
         if new_dataset_array.size == 0 and self.input_vector.size > 0:
             self.initialize_dataset_array(len(self.input_vector))
@@ -270,7 +294,7 @@ class DuplicateDetectionAlgorithm(ABC):
             self._dataset_array = new_dataset_array
 
         self._dirty = True
-    
+
     def get_vector_length(self) -> int:
         has_input = self.input_vector.size > 0
         has_dataset = self._dataset_array.size > 0
@@ -291,12 +315,12 @@ class DuplicateDetectionAlgorithm(ABC):
                 "Cannot determine vector length from input vector or dataset array. "
                 "Assign one of them before preinitialization."
             )
-        
+
         return vector_length
 
     def preinitialize_dataset_array(self) -> None:
-        vector_length=self.get_vector_length()
-        
+        vector_length = self.get_vector_length()
+
         if self._dataset_array.shape[0] > self.max_vector_array_size:
             raise ValueError("Dataset array size exceeds maximum allowed size.")
 
@@ -322,8 +346,13 @@ class DuplicateDetectionAlgorithm(ABC):
             ``True`` if ``self.input_vector`` is within ``self.tolerance`` of any
             existing dataset vector; ``False`` otherwise.
         """
-        pass # pragma: no cover
+        pass  # pragma: no cover
 
     @abstractmethod
     def get_dataset_unique_structures(self) -> int:
-        pass # pragma: no cover
+        """Mark the unique vectors of the dataset and return how many there are.
+
+        Every group of near-duplicates keeps exactly one vector, its earliest
+        in dataset order; the others are flagged. The result is stored in
+        ``unique_vector_indices`` (see ``get_unique_vector_indices()``).
+        """

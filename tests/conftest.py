@@ -1,10 +1,17 @@
 # tests/conftest.py
-import pytest
 import numpy as np
-from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
+import pytest
+
+from deduplicate_lib.core.duplicate_detection_algorithm import (
+    DuplicateDetectionAlgorithm,
+)
 from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
-from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import DistanceMatrix
-from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import MultiHashing
+from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import (
+    DistanceMatrix,
+)
+from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
+    MultiHashing,
+)
 
 # --- Dummy plugins for testing only ---
 
@@ -29,7 +36,7 @@ dummy_dda_object = DummyDDA(
     tolerance=0.1,
     input_vector=np.array([1.0, 2.0]),
     dataset_array=np.array([[1.0, 2.0]]),
-    max_vector_array_size=10
+    max_vector_array_size=10,
 )
 
 
@@ -47,6 +54,7 @@ def dummy_tolerance_calculator():
         perturbation_scale=0.1,
         binary_search_steps=20,
     )
+
 
 @pytest.fixture
 def distance_matrix_dda():

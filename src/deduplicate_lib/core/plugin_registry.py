@@ -1,7 +1,6 @@
 # core/plugin_registry.py
-from typing import Dict, Type
 
-_REGISTRY: Dict[str, Dict[str, Type]] = {
+_REGISTRY: dict[str, dict[str, type]] = {
     "duplicate_detection_algorithm": {},
     "tolerance_calculator": {},
     "benchmark": {},

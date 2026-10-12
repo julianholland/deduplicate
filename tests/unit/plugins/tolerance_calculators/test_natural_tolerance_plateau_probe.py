@@ -1,5 +1,8 @@
-import pytest
+import re
+
 import numpy as np
+import pytest
+
 from deduplicate_lib.plugins.tolerance_calculators.natural_tolerance_plateau_probe import (
     NaturalTolerancePlateauProbe,
 )
@@ -39,7 +42,9 @@ def test_tolerance_probe(distance_matrix_dda):
         assert unique_structures > 0
 
 
-def test_tolerance_probe_rebuilds_distance_matrix_for_swapped_dataset(distance_matrix_dda):
+def test_tolerance_probe_rebuilds_distance_matrix_for_swapped_dataset(
+    distance_matrix_dda,
+):
     """Regression test: tolerance_probe() swaps in tolerance_dataset_array via set_dataset_array(),
     which must trigger a distance matrix rebuild rather than relying on a stale matrix
     computed for whatever dataset was previously active."""
@@ -76,17 +81,12 @@ def test_find_plateaus(distance_matrix_dda):
         + [3] * (number_of_datapoints // 3)
         + [4] * (number_of_datapoints - 2 * (number_of_datapoints // 3))
     )
-    three_plateau_results = {
-        tol: unique_vectors
-        for tol, unique_vectors in zip(tol_values, three_plateau_unique_vectors)
-    }
+    three_plateau_results = dict(zip(tol_values, three_plateau_unique_vectors))
     no_plateau_results = {tol: i for i, tol in enumerate(tol_values)}
 
-    tc.datapoints_to_calculate_gradient=2
-    tc.plateau_threshold=0.1
-    plateaus = tc.find_plateaus(
-        three_plateau_results
-    )
+    tc.datapoints_to_calculate_gradient = 2
+    tc.plateau_threshold = 0.1
+    plateaus = tc.find_plateaus(three_plateau_results)
 
     assert len(plateaus) == 3
 
@@ -94,18 +94,18 @@ def test_find_plateaus(distance_matrix_dda):
         print(f"Plateau from {start_tol} to {end_tol} with length {length}")
         assert end_tol > start_tol
         assert length >= 2
-    
-    tc.datapoints_to_calculate_gradient=2
-    tc.plateau_threshold=0.1
-    no_plateaus = tc.find_plateaus(
-        no_plateau_results
-    )
-    
+
+    tc.datapoints_to_calculate_gradient = 2
+    tc.plateau_threshold = 0.1
+    no_plateaus = tc.find_plateaus(no_plateau_results)
+
     assert len(no_plateaus) == 0
 
 
 def test_find_plateaus_handles_wraparound_start_end(distance_matrix_dda):
-    tc = NaturalTolerancePlateauProbe(duplicate_detection_algorithm_object=distance_matrix_dda)
+    tc = NaturalTolerancePlateauProbe(
+        duplicate_detection_algorithm_object=distance_matrix_dda
+    )
     # make a tolerance_results with more keys than the plateau_log we'll fake
     tolerance_results = {0.0: 1, 0.1: 2, 0.2: 3, 0.3: 4}
 
@@ -115,6 +115,7 @@ def test_find_plateaus_handles_wraparound_start_end(distance_matrix_dda):
     # should not raise IndexError or UnboundLocalError; must return a list (possibly empty)
     plateaus = tc.find_plateaus(tolerance_results)
     assert isinstance(plateaus, list)
+
 
 @pytest.mark.parametrize("dda_fixture", ["distance_matrix_dda", "multi_hashing_dda"])
 def test_calculate_tolerance(request, dda_fixture):
@@ -129,14 +130,18 @@ def test_calculate_tolerance(request, dda_fixture):
 
     x_dupes = 33
     rng = np.random.default_rng(seed=803)
-    low_dataset=rng.uniform(low=0.0, high=0.3, size=(int(100-x_dupes/2), 200))
-    high_dataset=rng.uniform(low=0.7, high=1.0, size=(int(100-x_dupes/2), 200))
-    mid_dataset=rng.normal(loc=0.5, scale=0.001, size=(x_dupes, 200))
-    tc.duplicate_detection_algorithm_object.set_dataset_array(np.vstack([low_dataset, high_dataset, mid_dataset]))
+    low_dataset = rng.uniform(low=0.0, high=0.3, size=(int(100 - x_dupes / 2), 200))
+    high_dataset = rng.uniform(low=0.7, high=1.0, size=(int(100 - x_dupes / 2), 200))
+    mid_dataset = rng.normal(loc=0.5, scale=0.001, size=(x_dupes, 200))
+    tc.duplicate_detection_algorithm_object.set_dataset_array(
+        np.vstack([low_dataset, high_dataset, mid_dataset])
+    )
     tc.duplicate_detection_algorithm_object.input_vector = np.zeros(200)
 
     tc.create_perturbed_dataset()
-    tc.duplicate_detection_algorithm_object.set_dataset_array(tc.tolerance_dataset_array)
+    tc.duplicate_detection_algorithm_object.set_dataset_array(
+        tc.tolerance_dataset_array
+    )
     tolerance = tc.calculate_tolerance()
 
     assert isinstance(tolerance, float)
@@ -147,12 +152,14 @@ def test_calculate_tolerance(request, dda_fixture):
         tc.duplicate_detection_algorithm_object.get_dataset_unique_structures()
     )
     assert unique_vectors > 0 and unique_vectors <= len(tc.tolerance_dataset_array)
-    
-    
 
     tc.probe_steps = 1
-    with pytest.raises(ValueError,
-                       match="Not enough tolerance steps to calculate gradient with the given datapoints_to_calculate_gradient."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Not enough tolerance steps to calculate gradient with the given datapoints_to_calculate_gradient."
+        ),
+    ):
         tc.calculate_tolerance()
 
     tc.probe_steps = 5
@@ -160,9 +167,10 @@ def test_calculate_tolerance(request, dda_fixture):
         UserWarning,
         match="No plateaus found in tolerance probe. Consider adding in perturbed structures and/or increasing dataset size and/or increaseing probe steps.\nReturning average of all same and all different tolerance as fallback.",
     ):
-         tc.calculate_tolerance()
+        tc.calculate_tolerance()
 
     # assert False
+
 
 @pytest.mark.parametrize("dda_fixture", ["distance_matrix_dda", "multi_hashing_dda"])
 def test_get_plateau_log(request, dda_fixture):
@@ -182,29 +190,26 @@ def test_get_plateau_log(request, dda_fixture):
         + [3] * (number_of_datapoints // 3)
         + [4] * (number_of_datapoints - 2 * (number_of_datapoints // 3))
     )
-    three_plateau_results = {
-        tol: unique_vectors
-        for tol, unique_vectors in zip(tol_values, three_plateau_unique_vectors)
-    }
+    three_plateau_results = dict(zip(tol_values, three_plateau_unique_vectors))
 
-    sorted_tols=sorted(three_plateau_results.keys())
-    with pytest.raises(ValueError, match="datapoints_to_calculate_gradient must be greater than 1."):
-        tc.datapoints_to_calculate_gradient=1
-        tc.plateau_threshold=0.1
+    sorted_tols = sorted(three_plateau_results.keys())
+    with pytest.raises(
+        ValueError,
+        match=re.escape("datapoints_to_calculate_gradient must be greater than 1."),
+    ):
+        tc.datapoints_to_calculate_gradient = 1
+        tc.plateau_threshold = 0.1
         tc.get_plateau_log(
             sorted_tols=sorted_tols,
             tolerance_results=three_plateau_results,
-
         )
-    
-    tc.datapoints_to_calculate_gradient=2
-    tc.plateau_threshold=0.1    
+
+    tc.datapoints_to_calculate_gradient = 2
+    tc.plateau_threshold = 0.1
     plateau_log = tc.get_plateau_log(sorted_tols, three_plateau_results)
 
-    print(f'plateau log size{len(plateau_log)}\n',
-          f'plateau_log: {plateau_log}')
+    print(f"plateau log size{len(plateau_log)}\n", f"plateau_log: {plateau_log}")
 
     assert isinstance(plateau_log, np.ndarray)
     assert plateau_log.dtype == bool
     assert len(plateau_log) == number_of_datapoints - 2
-

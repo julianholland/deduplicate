@@ -1,13 +1,21 @@
-import pytest
-import numpy as np
-from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
 import re
-from deduplicate_lib.core.duplicate_detection_algorithm import fast_compute_distance_matrix, euclidean_distance, manhattan_distance, hamming_distance, cosine_distance
+
+import numpy as np
+import pytest
+
+from deduplicate_lib.core.duplicate_detection_algorithm import (
+    DuplicateDetectionAlgorithm,
+    cosine_distance,
+    euclidean_distance,
+    fast_compute_distance_matrix,
+    hamming_distance,
+    manhattan_distance,
+)
 
 
 def test_cannot_instantiate_abc():
     with pytest.raises(TypeError):
-        DuplicateDetectionAlgorithm() # type: ignore
+        DuplicateDetectionAlgorithm()  # type: ignore
 
 
 def test_concrete_implementation(dummy_dda):
@@ -19,19 +27,32 @@ def test_concrete_implementation(dummy_dda):
     assert isinstance(duplicate_count, int)
     assert duplicate_count == 1
 
+
 def test_dataset_array_setter(dummy_dda):
     new_dataset = np.array([[1.0, 2.0], [3.0, 4.0]])
-    with pytest.raises(AttributeError, match="Cannot assign to 'dataset_array' directly; use set_dataset_array(...)."):
+    with pytest.raises(
+        AttributeError,
+        match=re.escape(
+            "Cannot assign to 'dataset_array' directly; use set_dataset_array(...)."
+        ),
+    ):
         dummy_dda.dataset_array = new_dataset
-    
-    
+
+
 def test_distance_metric_setter(dummy_dda):
     dummy_dda.distance_metric = "manhattan"
     assert dummy_dda.distance_metric == "manhattan"
 
+
 def test_distance_metric_setter_invalid(dummy_dda):
-    with pytest.raises(ValueError, match=re.escape("Unsupported distance metric: invalid_metric, supported metrics are: ['euclidean', 'manhattan', 'cosine', 'hamming']")):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Unsupported distance metric: invalid_metric, supported metrics are: ['euclidean', 'manhattan', 'cosine', 'hamming']"
+        ),
+    ):
         dummy_dda.distance_metric = "invalid_metric"
+
 
 def test_calculate_distance(dummy_dda):
     permanent_vector = np.array([1.0, 2.0])
@@ -78,53 +99,85 @@ def test_calculate_distance(dummy_dda):
         print(f"Expected: {expected_results}")
         assert np.allclose(results, expected_results, atol=tolerance)
 
+
 def test_compute_distance_matrix(dummy_dda):
     dummy_dda.compute_distance_matrix()
-    assert dummy_dda.distance_matrix.shape == (dummy_dda.max_vector_array_size, dummy_dda.max_vector_array_size)
+    assert dummy_dda.distance_matrix.shape == (
+        dummy_dda.max_vector_array_size,
+        dummy_dda.max_vector_array_size,
+    )
     assert dummy_dda.vector_count == 1
     assert np.isclose(dummy_dda.distance_matrix[0, 0], 0.0)
+
 
 def test_compute_distance_matrix_with_input(dummy_dda):
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0], [3.0, 4.0]]))
     dummy_dda.compute_distance_matrix()
-    assert dummy_dda.distance_matrix.shape == (dummy_dda.max_vector_array_size, dummy_dda.max_vector_array_size)
+    assert dummy_dda.distance_matrix.shape == (
+        dummy_dda.max_vector_array_size,
+        dummy_dda.max_vector_array_size,
+    )
     assert dummy_dda.vector_count == 2
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0]]))
 
+
 def test_compute_distance_matrix_with_existing_distance_matrix(dummy_dda):
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0], [3.0, 4.0]]))
-    dummy_dda.distance_matrix = np.zeros((dummy_dda.max_vector_array_size, dummy_dda.max_vector_array_size))
+    dummy_dda.distance_matrix = np.zeros(
+        (dummy_dda.max_vector_array_size, dummy_dda.max_vector_array_size)
+    )
     dummy_dda.compute_distance_matrix()
-    assert dummy_dda.distance_matrix.shape == (dummy_dda.max_vector_array_size, dummy_dda.max_vector_array_size)
+    assert dummy_dda.distance_matrix.shape == (
+        dummy_dda.max_vector_array_size,
+        dummy_dda.max_vector_array_size,
+    )
     assert dummy_dda.vector_count == 2
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0]]))
+
 
 def test_get_new_distance_matrix_column(dummy_dda):
     new_distances = dummy_dda.get_new_distance_matrix_column(dummy_dda.dataset_array)
     assert new_distances.shape == (1,)
     assert np.isclose(new_distances[0], 0.0)
 
+
 def test_add_new_vector_to_distance_matrix(dummy_dda):
     dummy_dda.compute_distance_matrix(dummy_dda.dataset_array)
     dummy_dda.add_new_vector_to_distance_matrix(dummy_dda.dataset_array)
-    assert dummy_dda.distance_matrix.shape == (dummy_dda.max_vector_array_size, dummy_dda.max_vector_array_size)
-    assert dummy_dda.vector_count == 1 # since the dataset has only one vector, adding it again should not change the vector count
+    assert dummy_dda.distance_matrix.shape == (
+        dummy_dda.max_vector_array_size,
+        dummy_dda.max_vector_array_size,
+    )
+    assert (
+        dummy_dda.vector_count == 1
+    )  # since the dataset has only one vector, adding it again should not change the vector count
+
 
 def test_pass_only_methods_do_not_raise(dummy_dda):
     dummy_dda.pre_dda_processing()
     dummy_dda.add_input_vector_to_dda()
 
+
 def test_get_unique_vector_indices_with_mismatch(dummy_dda):
     dummy_dda.compute_distance_matrix(dummy_dda.dataset_array)
-    with pytest.raises(ValueError, match=re.escape("Unique vector indices array shape does not match dataset; please run get_dataset_unique_structures() to update the unique vector indices before calling this method.")):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Unique vector indices array shape does not match dataset; please run get_dataset_unique_structures() to update the unique vector indices before calling this method."
+        ),
+    ):
         dummy_dda.get_unique_vector_indices()
 
+
 def test_get_unique_vector_indices(dummy_dda):
-    unique_indices = np.array([True])  # since the dataset has only one vector, it is unique
+    unique_indices = np.array(
+        [True]
+    )  # since the dataset has only one vector, it is unique
     dummy_dda.unique_vector_indices = unique_indices
     dummy_dda.get_unique_vector_indices()  # should not raise an error since the shape matches
     assert dummy_dda.unique_vector_indices.shape == (1,)
     assert dummy_dda.unique_vector_indices[0] is np.bool_(True)
+
 
 def test_pre_dda_processing_is_idempotent_until_dataset_changes(distance_matrix_dda):
     dda = distance_matrix_dda
@@ -170,9 +223,14 @@ def test_initialize_dataset_array(dummy_dda):
     dummy_dda.initialize_dataset_array(vector_length=3)
     assert dummy_dda._dataset_array.shape == (dummy_dda.max_vector_array_size, 3)
 
+
 def test_initialize_distance_matrix(dummy_dda):
     dummy_dda.initialize_distance_matrix()
-    assert dummy_dda.distance_matrix.shape == (dummy_dda.max_vector_array_size, dummy_dda.max_vector_array_size)
+    assert dummy_dda.distance_matrix.shape == (
+        dummy_dda.max_vector_array_size,
+        dummy_dda.max_vector_array_size,
+    )
+
 
 def test_set_dataset_array_with_valid_input(dummy_dda):
     new_dataset = np.array([[1.0, 2.0], [3.0, 4.0]])
@@ -182,27 +240,43 @@ def test_set_dataset_array_with_valid_input(dummy_dda):
     assert np.array_equal(dummy_dda.get_filled_dataset_array(), new_dataset)
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0]]))
 
+
 def test_set_dataset_array_with_excess_size(dummy_dda):
     new_dataset = np.zeros((dummy_dda.max_vector_array_size + 1, 2))
-    with pytest.raises(ValueError, match="New dataset array size exceeds maximum allowed size."):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("New dataset array size exceeds maximum allowed size."),
+    ):
         dummy_dda.set_dataset_array(new_dataset)
+
 
 def test_set_dataset_array_with_empty_array_and_no_input_vector(dummy_dda):
     dummy_dda.input_vector = np.array([])
     dummy_dda.set_dataset_array(np.array([]))
     assert dummy_dda._dataset_array.size == 0
 
+
 def test_get_vector_length_with_no_input_or_dataset(dummy_dda):
     dummy_dda.set_dataset_array(np.array([]))
     dummy_dda.input_vector = np.array([])
-    with pytest.raises(ValueError, match=re.escape("Cannot determine vector length from input vector or dataset array. Assign one of them before preinitialization.")):
+    with pytest.raises(
+        ValueError,
+        match=re.escape(
+            "Cannot determine vector length from input vector or dataset array. Assign one of them before preinitialization."
+        ),
+    ):
         print(dummy_dda.get_vector_length())
-    
+
+
 def test_get_vector_length_with_input_and_dataset_mismatch(dummy_dda):
     dummy_dda.input_vector = np.array([1.0, 2.0])
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0, 3.0]]))
-    with pytest.raises(ValueError, match=re.escape("Input vector length does not match dataset vector length.")):
+    with pytest.raises(
+        ValueError,
+        match=re.escape("Input vector length does not match dataset vector length."),
+    ):
         print(dummy_dda.get_vector_length())
+
 
 def test_get_vector_length_with_dataset_array(dummy_dda):
     dummy_dda.input_vector = np.array([])
@@ -210,6 +284,7 @@ def test_get_vector_length_with_dataset_array(dummy_dda):
     assert dummy_dda.get_vector_length() == 3
     dummy_dda.input_vector = np.array([])
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0]]))
+
 
 def test_preinitialize_dataset_array_with_input_vector(dummy_dda):
     dummy_dda.input_vector = np.array([1.0, 2.0, 3.0])
@@ -220,7 +295,7 @@ def test_preinitialize_dataset_array_with_input_vector(dummy_dda):
 
     dummy_dda.input_vector = np.array([])
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0]]))
-    
+
 
 def test_preinitialize_dataset_array_with_dataset_array(dummy_dda):
     dummy_dda.input_vector = np.array([])
@@ -231,11 +306,14 @@ def test_preinitialize_dataset_array_with_dataset_array(dummy_dda):
     dummy_dda.input_vector = np.array([])
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0]]))
 
+
 def test_preinitialize_dataset_array_with_excess_size(dummy_dda):
     dummy_dda.input_vector = np.array([1.0, 2.0])
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]))
     dummy_dda.max_vector_array_size = 2
-    with pytest.raises(ValueError, match=re.escape("Dataset array size exceeds maximum allowed size.")):
+    with pytest.raises(
+        ValueError, match=re.escape("Dataset array size exceeds maximum allowed size.")
+    ):
         dummy_dda.preinitialize_dataset_array()
 
 
@@ -245,16 +323,21 @@ def test_preinitialize_dataset_array_with_dataset_shape_mismatch(dummy_dda):
     dummy_dda.preinitialize_dataset_array()
     assert dummy_dda._dataset_array.shape == (dummy_dda.max_vector_array_size, 2)
     assert dummy_dda.vector_count == 2
-    
+
 
 def test_fast_compute_distance_matrix(dummy_dda):
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0], [1.0, 2.0], [10.0, 20.0]]))
-    dm=fast_compute_distance_matrix(dummy_dda.get_filled_dataset_array(), euclidean_distance)
+    dm = fast_compute_distance_matrix(
+        dummy_dda.get_filled_dataset_array(), euclidean_distance
+    )
     assert dm.shape == (3, 3)
     assert np.isclose(dm[0, 0], 0.0)
     assert np.isclose(dm[0, 1], 0.0)
-    assert np.isclose(dm[0, 2], np.linalg.norm(np.array([1.0, 2.0]) - np.array([10.0, 20.0])))
+    assert np.isclose(
+        dm[0, 2], np.linalg.norm(np.array([1.0, 2.0]) - np.array([10.0, 20.0]))
+    )
     dummy_dda.set_dataset_array(np.array([[1.0, 2.0]]))
+
 
 def test_fast_euclidean_distance():
     vector1 = np.array([1.0, 2.0])
@@ -263,12 +346,14 @@ def test_fast_euclidean_distance():
     computed_distance = euclidean_distance(vector1, vector2)
     assert np.isclose(computed_distance, expected_distance)
 
+
 def test_fast_manhattan_distance():
     vector1 = np.array([1.0, 2.0])
     vector2 = np.array([4.0, 6.0])
     expected_distance = np.sum(np.abs(vector1 - vector2))
     computed_distance = manhattan_distance(vector1, vector2)
     assert np.isclose(computed_distance, expected_distance)
+
 
 def test_fast_hamming_distance():
     vector1 = np.array([1.0, 2.0])
@@ -277,32 +362,35 @@ def test_fast_hamming_distance():
     computed_distance = hamming_distance(vector1, vector2)
     assert np.isclose(computed_distance, expected_distance)
 
+
 def test_fast_cosine_distance():
     vector1 = np.array([1.0, 2.0])
     vector2 = np.array([4.0, 6.0])
-    expected_distance = 1 - np.dot(vector1, vector2) / (np.linalg.norm(vector1) * np.linalg.norm(vector2))
+    expected_distance = 1 - np.dot(vector1, vector2) / (
+        np.linalg.norm(vector1) * np.linalg.norm(vector2)
+    )
     computed_distance = cosine_distance(vector1, vector2)
     assert np.isclose(computed_distance, expected_distance)
+
 
 def test_unimplemented_duplicate_check(dummy_dda):
     class BadDummyDDA(DuplicateDetectionAlgorithm):
         pass
+
     with pytest.raises(TypeError):
         BadDummyDDA(
             tolerance=0.1,
             input_vector=np.array([1.0, 2.0]),
             dataset_array=np.array([[1.0, 2.0]]),
-        ) # type: ignore 
+        )  # type: ignore
+
 
 def test_deduplicate(dummy_dda):
-    dda=dummy_dda
+    dda = dummy_dda
     dda.set_dataset_array(np.array([[1.0, 2.0], [1.0, 2.0], [10.0, 20.0]]))
-    dda.vector_count=3
-    dda.unique_vector_indices = np.array([True, False, True])  
+    dda.vector_count = 3
+    dda.unique_vector_indices = np.array([True, False, True])
     deduplicated_dataset = dda.deduplicate()
     assert deduplicated_dataset.shape == (2, 2)
     assert np.array_equal(deduplicated_dataset, np.array([[1.0, 2.0], [10.0, 20.0]]))
     dda.set_dataset_array(np.array([[1.0, 2.0]]))
-
-    
-    

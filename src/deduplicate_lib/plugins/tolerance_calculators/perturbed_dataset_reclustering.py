@@ -1,7 +1,10 @@
-from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
-from deduplicate_lib.core.duplicate_detection_algorithm import DuplicateDetectionAlgorithm
-from deduplicate_lib.core.plugin_registry import register_plugin
 import numpy as np
+
+from deduplicate_lib.core.duplicate_detection_algorithm import (
+    DuplicateDetectionAlgorithm,
+)
+from deduplicate_lib.core.plugin_registry import register_plugin
+from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
 
 
 @register_plugin("tolerance_calculator", "perturbed_dataset_reclustering")
@@ -34,14 +37,16 @@ class PerturbedDatasetReclustering(ToleranceCalculator):
         One of ``"average"``, ``"loose"``, or ``"tight"``.  Defaults to
         ``"average"``.
     """
-    def __init__(self,
+
+    def __init__(
+        self,
         duplicate_detection_algorithm_object: DuplicateDetectionAlgorithm,
         tolerance_dataset_array: np.ndarray = np.array([]),
         perturbations_per_vector: int = 1,
         perturbation_scale: float = 0.1,
         binary_search_steps: int = 20,
         target_unique_vectors: int | None = None,
-        target_unique_vectors_threshold: str = "average"
+        target_unique_vectors_threshold: str = "average",
     ):
 
         super().__init__(
@@ -53,23 +58,26 @@ class PerturbedDatasetReclustering(ToleranceCalculator):
         )
 
         if target_unique_vectors is None:
-            self.target_unique_vectors = duplicate_detection_algorithm_object.vector_count
+            self.target_unique_vectors = (
+                duplicate_detection_algorithm_object.vector_count
+            )
         else:
             self.target_unique_vectors = target_unique_vectors
-        
+
         self.target_unique_vectors_threshold = target_unique_vectors_threshold
+
     def __str__(self) -> str:
         return f"PerturbedDatasetReclustering(perturbations_per_vector={self.perturbations_per_vector}, perturbation_scale={self.perturbation_scale}, dda={str(self.duplicate_detection_algorithm_object).split('(')[0]})"
-    
+
     def calculate_tolerance(self) -> float:
         """Find the highest and lowest values of tolerance that yield the length of the original dataset from the perturbed dataset, then returns the average of those two values.
-        
+
         Returns:
             float: The calculated tolerance value.
         """
         self.duplicate_detection_algorithm_object.pre_dda_processing()
         print(self.duplicate_detection_algorithm_object.vector_count)
-        if self.target_unique_vectors_threshold == "average":        
+        if self.target_unique_vectors_threshold == "average":
             low_tolerance = self.binary_search_tolerance(
                 target_unique_vectors=self.target_unique_vectors,
                 find_largest_tolerance_for_target=False,
@@ -79,7 +87,7 @@ class PerturbedDatasetReclustering(ToleranceCalculator):
                 find_largest_tolerance_for_target=True,
             )
             return (low_tolerance + high_tolerance) / 2
-        
+
         elif self.target_unique_vectors_threshold == "loose":
             return self.binary_search_tolerance(
                 target_unique_vectors=self.target_unique_vectors,
@@ -91,4 +99,6 @@ class PerturbedDatasetReclustering(ToleranceCalculator):
                 find_largest_tolerance_for_target=False,
             )
         else:
-            raise ValueError(f"Invalid target_unique_vectors_threshold: {self.target_unique_vectors_threshold}. Must be 'average', 'loose', or 'tight'.")
+            raise ValueError(
+                f"Invalid target_unique_vectors_threshold: {self.target_unique_vectors_threshold}. Must be 'average', 'loose', or 'tight'."
+            )

@@ -4,7 +4,38 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- Packaging moved to uv + hatchling: dev/test dependencies are now PEP 735 dependency
+  groups (`uv sync` installs them) instead of the `dev` extra, `uv.lock` pins the
+  development environment, and CI installs with `uv sync --locked` and tests on
+  Python 3.10–3.12.
+- Minimum Python version raised from 3.8 to 3.10 (current numba releases already
+  require it).
+- The version now comes from git tags via hatch-vcs instead of a hand-edited
+  `__version__` (which had drifted: the `0.1.2` tag still said `0.1.1`).
+  `deduplicate_lib.__version__` still works. New tags use the `vMAJOR.MINOR.PATCH` form.
+- Ruff now enforces the same rule set as ALomancy (isort, bugbear, pyupgrade,
+  comprehensions, unused arguments, simplify, ruff-specific). Code was updated to
+  match: sorted imports, builtin generics, `stacklevel=2` on all warnings, so they
+  point at the caller instead of inside the library.
+- `DuplicateDetectionAlgorithm.pre_dda_processing()` (and the `MultiHashing`
+  override) no longer accept unused `*args, **kwargs`.
+
 ### Fixed
+- `DistanceMatrix.get_dataset_unique_structures()` now keeps exactly one vector from
+  each group of near-duplicates: in dataset order, a vector is unique unless it is within
+  `tolerance` of a vector already kept. Before, a vector counted as unique only if
+  nothing at all was within `tolerance` (row 0 excepted), so every group that didn't
+  contain row 0 was flagged in full and `deduplicate()` dropped it entirely. This matches
+  `MultiHashing`, which already keeps the first vector of each group.
+
+### Behaviour change
+- Unique counts from `DistanceMatrix` are higher wherever near-duplicate groups exist,
+  so the tolerances that `NaturalTolerancePlateauProbe` and
+  `PerturbedDatasetReclustering` find with it shift. In the integration tests,
+  0.168 → 0.181 (reclustering) and 0.141 → 0.153 (plateau probe). At the old values,
+  one point plus a 30-vector cluster deduplicated to the point alone; at the new
+  values, to the point plus one cluster member.
 - `MultiHashing.duplicate_check()` / `get_uniqueness_score()` no longer return stale results
   when `tolerance`, `seed`, or `perturbations` change after the hash dictionary was first
   built — `pre_dda_processing()` now detects these changes and forces a rebuild.
