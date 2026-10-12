@@ -38,10 +38,10 @@ Concrete implementations live under `src/deduplicate_lib/plugins/` and register 
 
 ### Duplicate detection algorithms (`plugins/duplicate_detection_algorithms/`)
 
-- **`distance_matrix.py`** (`DistanceMatrix`, kind=`duplicate_detection_algorithm`, name=`distance_matrix`) — computes a full pairwise distance matrix and flags duplicates below `tolerance`. Simple and accurate but expensive (O(n²)).
+- **`distance_matrix.py`** (`DistanceMatrix`, kind=`duplicate_detection_algorithm`, name=`distance_matrix`) — computes a full pairwise distance matrix; in dataset order, a vector is kept unless it is within `tolerance` of a vector already kept, so each group of near-duplicates keeps its earliest member. Simple and accurate but expensive (O(n²)).
 - **`multi_hashing.py`** (`MultiHashing`, name=`multi_hashing`) — smears each vector with random perturbations, rounds to `tolerance`, and hashes. Duplicates are decided by the proportion of hash clashes across perturbations vs. `acceptance_threshold` (derived from `sigma_accepatnce_threshold`, 1-4). Fast, approximate. Only supports `hamming` distance.
 
-Both subclass `DuplicateDetectionAlgorithm` and implement `duplicate_check()` and `get_dataset_unique_structures()`.
+Both subclass `DuplicateDetectionAlgorithm` and implement `duplicate_check()` and `get_dataset_unique_structures()`. Contract for the latter: every group of near-duplicates keeps exactly one vector (its earliest); never flag a whole group.
 
 ### Tolerance calculators (`plugins/tolerance_calculators/`)
 

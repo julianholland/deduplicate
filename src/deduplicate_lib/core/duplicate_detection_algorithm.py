@@ -326,4 +326,9 @@ class DuplicateDetectionAlgorithm(ABC):
 
     @abstractmethod
     def get_dataset_unique_structures(self) -> int:
-        pass # pragma: no cover
+        """Mark the unique vectors of the dataset and return how many there are.
+
+        Every group of near-duplicates keeps exactly one vector, its earliest
+        in dataset order; the others are flagged. The result is stored in
+        ``unique_vector_indices`` (see ``get_unique_vector_indices()``).
+        """

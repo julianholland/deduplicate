@@ -6,8 +6,10 @@ import numpy as np
 class DistanceMatrix(DuplicateDetectionAlgorithm):
     """Exact deduplication using a full pairwise distance matrix.
 
-    Computes all N×N pairwise distances and flags any vector whose nearest
-    neighbour is within ``tolerance`` as a duplicate.  O(N²) time and space;
+    Computes all N×N pairwise distances.  Vectors are taken in dataset order:
+    each one is kept as unique unless it is within ``tolerance`` of a vector
+    already kept, so every group of near-duplicates keeps exactly one vector
+    (its earliest) and the rest are flagged.  O(N²) time and space;
     suitable for small-to-medium datasets (up to ~5 000 vectors) where exact
     results are required.  Supports all four distance metrics: ``"euclidean"``,
     ``"manhattan"``, ``"cosine"``, and ``"hamming"``.
@@ -58,14 +60,21 @@ class DistanceMatrix(DuplicateDetectionAlgorithm):
         )
 
     def get_dataset_unique_structures(self) -> int:
+        """Keep the first vector of each group of near-duplicates.
+
+        A vector is unique unless it is within ``tolerance`` of a vector
+        already kept (earlier in the dataset). Comparing only against kept
+        vectors means a group of mutual duplicates keeps one representative,
+        rather than every member flagging every other.
+        """
         self.pre_dda_processing()
-        self.unique_vector_indices = np.zeros(self.vector_count, dtype=bool)
-        self.unique_vector_indices[0] = True  # the first vector is always unique
-        for i in range(1, self.vector_count):
-            imask = np.arange(self.vector_count) != i
-            if np.all(self.distance_matrix[i, : self.vector_count][imask] >= self.tolerance):
-                self.unique_vector_indices[i] = True
-        return np.sum(self.unique_vector_indices)
+        n = self.vector_count
+        distances = self.distance_matrix[:n, :n]
+        unique = np.zeros(n, dtype=bool)
+        for i in range(n):
+            unique[i] = not np.any(distances[i, :i][unique[:i]] < self.tolerance)
+        self.unique_vector_indices = unique
+        return int(np.sum(unique))
 
     def _rebuild_auxiliary_structures(self) -> None:
         self.compute_distance_matrix(self.dataset_array)

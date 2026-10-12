@@ -99,3 +99,67 @@ def test_add_input_vector_to_dda_without_prior_pre_dda_processing():
     assert dda.get_filled_dataset_array().shape[0] == initial_dataset_size + 1
     assert np.array_equal(dda.get_filled_dataset_array()[-1], dda.input_vector)
     assert dda.get_filled_distance_matrix().shape[0] == initial_dataset_size + 1
+
+def _unique_indices(data, tolerance):
+    data = np.asarray(data, dtype=float)
+    dda = DistanceMatrix(dataset_array=data, max_vector_array_size=len(data))
+    dda.tolerance = tolerance
+    count = dda.get_dataset_unique_structures()
+    indices = [int(i) for i in dda.get_unique_vector_indices()]
+    assert count == len(indices)
+    return indices
+
+
+@pytest.mark.parametrize(
+    ("data", "expected"),
+    [
+        # A group that doesn't contain row 0 keeps its first member.
+        ([[5.0], [0.0], [0.1]], [0, 1]),
+        # Several groups: one vector each, always the earliest.
+        ([[5.0], [0.0], [0.1], [0.2], [9.0], [5.1], [9.2]], [0, 1, 4]),
+        # A chain: 0.8 is only compared with kept vectors (0.0), not with
+        # the flagged 0.4 between them.
+        ([[0.0], [0.4], [0.8]], [0, 2]),
+        # Everything within tolerance of the first vector.
+        ([[0.0], [0.1], [0.2], [0.3]], [0]),
+        # Nothing within tolerance of anything.
+        ([[0.0], [1.0], [2.0], [3.0]], [0, 1, 2, 3]),
+    ],
+)
+def test_one_vector_kept_per_group(data, expected):
+    assert _unique_indices(data, tolerance=0.5) == expected
+
+
+def test_deduplicate_returns_one_vector_per_group():
+    data = np.array([[5.0, 0.0], [0.0, 0.0], [0.1, 0.0], [5.1, 0.0]])
+    dda = DistanceMatrix(dataset_array=data, max_vector_array_size=len(data))
+    dda.tolerance = 0.5
+    dda.get_dataset_unique_structures()
+    assert np.array_equal(dda.deduplicate(), data[[0, 1]])
+
+
+def test_agrees_with_multi_hashing_on_separated_clusters():
+    """Well-separated clusters: both algorithms keep each cluster's first
+    vector."""
+    from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
+        MultiHashing,
+    )
+
+    rng = np.random.default_rng(803)
+    centres = rng.uniform(0, 10, size=(6, 4))
+    data = np.vstack(
+        [centre + rng.normal(0, 1e-4, size=(5, 4)) for centre in centres]
+    )
+    order = rng.permutation(len(data))
+    data = data[order]
+    first_of_each_cluster = sorted(
+        int(np.where(order // 5 == c)[0].min()) for c in range(6)
+    )
+
+    assert _unique_indices(data, tolerance=0.5) == first_of_each_cluster
+
+    mh = MultiHashing(
+        dataset_array=data, max_vector_array_size=len(data), tolerance=0.5
+    )
+    mh.get_dataset_unique_structures()
+    assert [int(i) for i in mh.get_unique_vector_indices()] == first_of_each_cluster
