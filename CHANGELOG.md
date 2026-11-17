@@ -2,6 +2,133 @@
 
 All notable changes to this project are documented in this file.
 
+## [Unreleased]
+
+### Changed
+- `MultiHashing` was rewritten around flat `uint64` hash tables: per perturbation, a
+  sorted array of the dataset's distinct hashes (`sorted_hashes`), plus a per-vector
+  count of the perturbations in which it is the earliest vector of its hash bucket
+  (`unique_counts`). `get_dataset_unique_structures()` is now O(P·n log n) instead of
+  O(P·n²) and uses a fraction of the memory, which is the first step towards
+  out-of-core deduplication of very large datasets. Results are unchanged: the unique
+  masks, `duplicate_check()` and `get_uniqueness_score()` are tested against the old
+  implementation.
+- Hashes come from a new numba kernel, `fast_quantise_and_hash`, instead of Python's
+  `hash()`, so they are the same in every process (Python salts `hash()` per process)
+  and can be persisted.
+- Progress output of the tolerance calculators goes through `logging`
+  (`deduplicate_lib.*` loggers) instead of `print`; leftover debug prints were removed.
+
+### Added
+- `DuplicateDetectionAlgorithm.get_unique_vector_mask()` returns the boolean mask of
+  unique vectors. `get_unique_vector_indices()` still returns integer indices.
+- Out-of-core datasets: pass `dataset=` (a `.npy`/`.h5`/`.hdf5` path or a
+  `VectorStore`) instead of `dataset_array=`, and `MultiHashing` reads the vectors in
+  chunks instead of loading them. New `deduplicate_lib.core.vector_store` module:
+  `InMemoryStore`, `NpyStore` (memory-mapped), `HDF5Store` (appendable),
+  `CallableStore` (adapter for databases and other sources), `open_store()`.
+- `memory_limit` (bytes, `"8GB"`, or `"auto"` = half the available memory) sizes the
+  row chunks and perturbation batches. `MultiHashing` keeps the per-perturbation hash
+  tables only if they fit in a quarter of it; otherwise it keeps just the unique
+  counts, and `duplicate_check()`, `get_uniqueness_score()` and appends raise
+  `MemoryError`.
+- `n_threads`: `fast_quantise_and_hash` is now parallel (numba `prange`).
+- `progress=True` shows tqdm progress bars.
+- `deduplicate(out=...)` streams the unique vectors to a `.npy`/HDF5 file and returns
+  it as a store. Out-of-core datasets write `<input>_unique.<ext>` by default; for
+  in-memory datasets `deduplicate()` still returns an array.
+- `MultiHashing(index_dir=...)` keeps the hash tables on disk (memory-mapped), so
+  `duplicate_check()` and appends work at any dataset size. The index is reused when
+  the dataset and hashing parameters match (`IndexMismatchError` names what differs),
+  resumes an interrupted build (it commits after every perturbation batch), and
+  recovers vectors appended to an HDF5 dataset without a `flush()`. Commits are
+  atomic (`metadata.json` names the current generation-numbered files) and fsynced;
+  see `deduplicate_lib.core.hash_index`.
+- `MultiHashing.add_vectors()` appends many vectors at once (same result as appending
+  one at a time) and `MultiHashing.flush()` saves appended vectors to the index.
+- `VectorStore.iter_chunks()` takes an optional row range.
+- Optional extras `hdf5` (h5py) and `progress` (tqdm).
+- Docs: a "Large datasets" page.
+
+### Changed (DistanceMatrix)
+- `DistanceMatrix` refuses out-of-core datasets (`ValueError`) and raises
+  `MemoryError` when its `max_vector_array_size`² matrix would exceed `memory_limit`,
+  pointing to `MultiHashing`. Pass a larger `memory_limit` to override.
+
+### Changed (tolerance calculators, breaking)
+- Both tolerance calculators tune on a sample of the dataset read through
+  `dda.store`, so they work on out-of-core datasets, and run every search on a
+  separate in-memory copy of the DDA (`DuplicateDetectionAlgorithm.tuning_copy()`):
+  the DDA passed in (its dataset, store, `index_dir` and hash tables) is no longer
+  modified. New arguments `sample_size` (rows tuned on), `sampling` (`"blocks"`,
+  `"random"`, `"head"`), `block_rows` and `seed`; all arguments after the DDA are
+  keyword-only.
+- `PerturbedDatasetReclustering` builds its noisy copies from the sample (default
+  `perturbations_per_vector=5`, `sample_size=500`, `sampling="random"`); the default
+  target is the number of sampled vectors. An invalid
+  `target_unique_vectors_threshold` raises in `__init__`.
+- `NaturalTolerancePlateauProbe` sweeps log-spaced tolerances from below the
+  "all different" to above the "all same" tolerance (it used a linear sweep between
+  10%/90%-unique bounds, which missed fine clustering scales), detects plateaus
+  against log tolerance, merges neighbouring plateaus with the same count, and returns
+  a plateau's geometric midpoint. New `find_natural_plateaus()` returns every plateau
+  as a `Plateau` (start/end/midpoint tolerance, unique count, steps, `trivial`);
+  `calculate_tolerance(condition=...)` takes `"longest"` (default), `"tightest"` or
+  `"loosest"` and never picks the trivial all-unique/all-same plateaus. Default
+  `sampling="blocks"`. The gradient window (`datapoints_to_calculate_gradient`) now
+  defaults to 10% of `probe_steps` (it was 3 steps), chosen from a study across
+  synthetic datasets, sizes, dimensions and both DDAs; see "Choosing the gradient
+  window" in the docs and `docs/scripts/ntpp_window_study.py`. Fixes plateau detection mis-pairing starts and ends when the
+  sweep begins inside a plateau.
+- `memory_limit="auto"` uses `MemAvailable` on Linux; it used the free physical
+  pages, which leave out reclaimable page cache and were often a small fraction of
+  the usable memory.
+
+### Added (tolerance calculators)
+- `VectorStore.sample_blocks()` and `deduplicate_lib.core.tolerance_calculator.draw_sample()`.
+
+### Fixed
+- `deduplicate()` recomputes the unique mask first; it returned rows chosen by a stale
+  mask after a `tolerance` change or a same-size `set_dataset_array()`.
+- `MultiHashing` keeps a user-supplied `pertrubation_array`; it was replaced by one
+  generated from `seed` on the first build. A seed-generated array is regenerated when
+  `seed` changes, and assigning a new array triggers a rebuild.
+- `deduplicate(out=...)` refuses to write over its own input file.
+- `DistanceMatrix.set_dataset_store()` with an on-disk dataset raises before dropping the
+  current data, leaving the DDA usable.
+- `DistanceMatrix` only refuses (`MemoryError`) a distance matrix larger than an
+  explicit `memory_limit`; with the default `"auto"` (which depends on the memory free
+  at that moment) it warns (`ResourceWarning`).
+- `MultiHashing.add_vectors()` keeps `vector_count` in step with the hash tables if it
+  fails part-way, and hashes rows left in an out-of-core store by such a failure before
+  appending more.
+- `VectorStore.take()`/`sample()` read only the requested rows (memory-mapped fancy
+  indexing for `.npy`, one point selection for HDF5) instead of a 65536-row chunk per row.
+- The hash index fingerprints every indexed row (sha256 per block of 2^20 rows,
+  extended incrementally as the index grows) instead of the first and last 1024 rows,
+  so an index is no longer reused after rows in the middle of the dataset change.
+  Opening an index reads the indexed rows once. Index format version 2.
+
+### Known issues
+- Peak memory while building hash tables can exceed `memory_limit` by roughly
+  1.2-1.5x (`np.unique`'s working copies are not budgeted).
+- Many small `MultiHashing.add_vectors()` calls in `index_dir` mode slow down with the
+  number of pending (unflushed) hashes; call `flush()` periodically or add in larger
+  batches.
+
+### Removed (breaking)
+- `ToleranceCalculator(tolerance_dataset_array=...)`, `temp_attr`,
+  `create_perturbed_dataset()`, `_ensure_perturbed_dataset()`, and the
+  `perturbations_per_vector`/`perturbation_scale` arguments of the base class and
+  `NaturalTolerancePlateauProbe`; `NaturalTolerancePlateauProbe(probe_buffer_fraction=...)`
+  and its `"minimum"`/`"maximum"` conditions (use `"tightest"`/`"loosest"`).
+- `MultiHashing.hash_dict` and its helpers (`initialize_hash_vector_dictionary`,
+  `compute_hash_vector_dictionary`, `add_input_vector_hashes_to_dictionary`,
+  `warn_if_vector_dict_mismatch`) and `fast_round_and_perturb`. Use
+  `sorted_hashes`/`unique_counts`, `initialize_hash_tables()`, `compute_hash_tables()`
+  and `add_input_vector_hashes()` instead. `create_hash_vector()` now returns `uint64`
+  hashes, whose values differ from the old ones.
+
 ## [0.1.3] - 2026-10-12
 
 ### Changed

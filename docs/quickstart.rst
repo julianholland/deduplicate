@@ -66,6 +66,5 @@ to find one automatically, then assign it back to the DDA.
         perturbations_per_vector=3,
         perturbation_scale=0.05,
     )
-    tc.create_perturbed_dataset()
     dda.tolerance = tc.calculate_tolerance()
     unique = dda.deduplicate()

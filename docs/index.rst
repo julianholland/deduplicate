@@ -11,4 +11,5 @@ algorithms, along with tools for automatically selecting the distance threshold
    :caption: Contents
 
    quickstart
+   large_datasets
    api/index

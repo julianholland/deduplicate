@@ -29,6 +29,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# On-disk datasets in HDF5 (HDF5Store).
+hdf5 = ["h5py"]
+# progress=True progress bars.
+progress = ["tqdm"]
 # An extra (not a dependency group) so Read the Docs can install it.
 docs = [
     "sphinx>=7",
@@ -49,6 +53,9 @@ test = [
     "notebook",
     "ipykernel",
     "matplotlib",
+    # the optional extras, so their code paths are tested
+    "h5py",
+    "tqdm",
 ]
 dev = [
     { include-group = "test" },

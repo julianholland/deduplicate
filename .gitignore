@@ -6,3 +6,5 @@ build/
 *.egg-info/
 __pycache__/
 src/deduplicate_lib/version.py
+# NTPP window-study cache (regenerate with docs/scripts/ntpp_window_study.py)
+docs/scripts/ntpp_window_study_results.json

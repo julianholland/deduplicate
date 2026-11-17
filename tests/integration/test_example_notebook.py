@@ -39,10 +39,7 @@ def test_multi_hashing_example_notebook_output():
     dda = MultiHashing(dataset_array=noisy_dataset, perturbations=10)
     dda.pre_dda_processing()
 
-    tc = NaturalTolerancePlateauProbe(
-        duplicate_detection_algorithm_object=dda,
-        tolerance_dataset_array=noisy_dataset,
-    )
+    tc = NaturalTolerancePlateauProbe(duplicate_detection_algorithm_object=dda)
 
     tolerance = tc.calculate_tolerance()
 
