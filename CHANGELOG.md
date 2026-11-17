@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file.
 
-## [Unreleased]
+## [1.0.0] - 2026-11-17
 
 ### Changed
 - `MultiHashing` was rewritten around flat `uint64` hash tables: per perturbation, a

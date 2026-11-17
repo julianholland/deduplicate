@@ -8,7 +8,7 @@ The typical DDA lifecycle is: construct the DDA (optionally passing
 ``deduplicate()`` to retrieve the full set of unique vectors.
 
 .. autoclass:: deduplicate_lib.core.duplicate_detection_algorithm.DuplicateDetectionAlgorithm
-   :members: deduplicate, duplicate_check, add_input_vector_to_dda, set_dataset_array, set_dataset_store, store, is_out_of_core, get_dataset_unique_structures, get_unique_vector_mask, get_unique_vector_indices
+   :members: deduplicate, duplicate_check, add_input_vector_to_dda, set_dataset_array, set_dataset_store, store, is_out_of_core, get_dataset_unique_structures, get_unique_vector_mask, get_unique_vector_indices, tuning_copy
    :show-inheritance:
 
 
