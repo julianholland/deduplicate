@@ -49,9 +49,6 @@ def dummy_dda():
 def dummy_tolerance_calculator():
     return DummyToleranceCalculator(
         duplicate_detection_algorithm_object=dummy_dda_object,
-        tolerance_dataset_array=np.array([]),
-        perturbations_per_vector=5,
-        perturbation_scale=0.1,
         binary_search_steps=20,
     )
 

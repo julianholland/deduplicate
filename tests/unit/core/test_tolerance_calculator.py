@@ -1,7 +1,14 @@
 import numpy as np
 import pytest
 
-from deduplicate_lib.core.tolerance_calculator import ToleranceCalculator
+from deduplicate_lib.core.tolerance_calculator import (
+    ToleranceCalculator,
+    draw_sample,
+)
+from deduplicate_lib.core.vector_store import InMemoryStore
+from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import (
+    DistanceMatrix,
+)
 
 
 def test_cannot_instantiate_abc():
@@ -10,142 +17,141 @@ def test_cannot_instantiate_abc():
 
 
 def test_calculate_tolerance(dummy_tolerance_calculator):
-    tolerance = dummy_tolerance_calculator.calculate_tolerance()
-    assert tolerance == 0.1
+    assert dummy_tolerance_calculator.calculate_tolerance() == 0.1
 
 
-def test_create_perturbed_dataset(dummy_tolerance_calculator):
-    dummy_tolerance_calculator.perturbations_per_vector = 3000
-
-    def run_per_seed(seed):
-        dummy_tolerance_calculator.create_perturbed_dataset(seed=seed)
-        assert (
-            dummy_tolerance_calculator.tolerance_dataset_array.shape[0]
-            == dummy_tolerance_calculator.duplicate_detection_algorithm_object.vector_count
-            * dummy_tolerance_calculator.perturbations_per_vector
-        )
-        assert (
-            dummy_tolerance_calculator.tolerance_dataset_array.shape[1]
-            == dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape[
-                1
-            ]
-        )
-        print(
-            dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape
-        )
-        std_dev_of_perturbations = np.std(
-            dummy_tolerance_calculator.tolerance_dataset_array
-            - np.repeat(
-                dummy_tolerance_calculator.duplicate_detection_algorithm_object.get_filled_dataset_array(),
-                dummy_tolerance_calculator.perturbations_per_vector,
-                axis=0,
-            ),
-            axis=0,
-        )
-
-        assert np.allclose(
-            std_dev_of_perturbations,
-            dummy_tolerance_calculator.perturbation_scale,
-            atol=0.05 * dummy_tolerance_calculator.perturbation_scale,
-        ), f" {std_dev_of_perturbations} too different for seed {seed}"
-
-        original = dummy_tolerance_calculator.duplicate_detection_algorithm_object.get_filled_dataset_array()
-        perturbed = dummy_tolerance_calculator.tolerance_dataset_array
-        for i in range(original.shape[0]):
-            assert np.allclose(
-                perturbed[i * dummy_tolerance_calculator.perturbations_per_vector],
-                original[i],
-            )
-
-    for seed in list(range(803, 1000)):
-        run_per_seed(seed)
-
-
-def test_ensure_perturbed_dataset(dummy_tolerance_calculator):
-
-    dummy_tolerance_calculator.create_perturbed_dataset(seed=803)
-    dummy_tolerance_calculator._ensure_perturbed_dataset()
-    correct_shape = (
-        dummy_tolerance_calculator.duplicate_detection_algorithm_object.get_filled_dataset_array().shape[
-            0
-        ]
-        * dummy_tolerance_calculator.perturbations_per_vector,
-        dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape[
-            1
-        ],
-    )
-    assert dummy_tolerance_calculator.tolerance_dataset_array.shape == correct_shape
-
-    dummy_tolerance_calculator.tolerance_dataset_array = np.array(
-        []
-    )  # Reset to empty to force regeneration
-    with pytest.warns(
-        UserWarning,
-        match="Perturbed dataset is not properly initialized. Recreating it.\nEnsure a perturbed dataset is set prior finding tolerance.",
+def test_removed_api_is_gone(dummy_tolerance_calculator):
+    for name in (
+        "tolerance_dataset_array",
+        "temp_attr",
+        "create_perturbed_dataset",
+        "_ensure_perturbed_dataset",
     ):
-        dummy_tolerance_calculator._ensure_perturbed_dataset()
-    assert dummy_tolerance_calculator.tolerance_dataset_array.shape == correct_shape
+        assert not hasattr(dummy_tolerance_calculator, name)
 
 
-def test_temp_attr(dummy_tolerance_calculator):
-    original_value = (
-        dummy_tolerance_calculator.duplicate_detection_algorithm_object.tolerance
+def test_invalid_sampling_raises_in_init(dummy_dda):
+    from tests.conftest import DummyToleranceCalculator
+
+    with pytest.raises(ValueError, match="Invalid sampling"):
+        DummyToleranceCalculator(dummy_dda, sampling="nope")
+
+
+# --- draw_sample ---
+
+STORE = InMemoryStore(np.arange(500 * 3, dtype=float).reshape(500, 3))
+
+
+@pytest.mark.parametrize("sampling", ["blocks", "random", "head"])
+def test_draw_sample_modes(sampling):
+    sample = draw_sample(STORE, 120, sampling=sampling, block_rows=20, seed=1)
+    assert sample.shape == (120, 3)
+    assert sample.dtype == float
+    # every sampled row is a row of the store
+    assert np.isin(sample[:, 0], STORE.read(0, 500)[:, 0]).all()
+    again = draw_sample(STORE, 120, sampling=sampling, block_rows=20, seed=1)
+    assert np.array_equal(sample, again)
+
+
+def test_draw_sample_head_is_first_rows():
+    assert np.array_equal(
+        draw_sample(STORE, 10, sampling="head"), STORE.read(0, 10).astype(float)
     )
-    with dummy_tolerance_calculator.temp_attr(
-        dummy_tolerance_calculator.duplicate_detection_algorithm_object,
-        "tolerance",
-        0.5,
-    ):
-        assert (
-            dummy_tolerance_calculator.duplicate_detection_algorithm_object.tolerance
-            == 0.5
-        )
-    assert (
-        dummy_tolerance_calculator.duplicate_detection_algorithm_object.tolerance
-        == original_value
+
+
+def test_draw_sample_blocks_are_contiguous():
+    sample = draw_sample(STORE, 100, sampling="blocks", block_rows=20, seed=2)
+    ids = sample[:, 0] / 3
+    assert (ids[::20] % 20 == 0).all()
+    assert (np.diff(ids.reshape(5, 20), axis=1) == 1).all()
+
+
+def test_draw_sample_random_differs_by_seed():
+    a = draw_sample(STORE, 50, sampling="random", seed=1)
+    b = draw_sample(STORE, 50, sampling="random", seed=2)
+    assert not np.array_equal(a, b)
+
+
+@pytest.mark.parametrize("sampling", ["blocks", "random", "head"])
+def test_draw_sample_small_store_returns_everything(sampling):
+    small = InMemoryStore(np.arange(12.0).reshape(6, 2))
+    sample = draw_sample(small, 100, sampling=sampling)
+    assert sorted(sample[:, 0]) == list(small.read(0, 6)[:, 0])
+
+
+def test_draw_sample_invalid_mode():
+    with pytest.raises(ValueError, match="Invalid sampling"):
+        draw_sample(STORE, 10, sampling="bogus")
+
+
+@pytest.mark.parametrize("size", [0, -3])
+def test_draw_sample_rejects_bad_size(size):
+    with pytest.raises(ValueError, match="sample_size"):
+        draw_sample(STORE, size)
+
+
+def test_draw_sample_empty_store():
+    with pytest.raises(ValueError, match="empty"):
+        draw_sample(InMemoryStore(np.empty((0, 3))), 10)
+
+
+# --- base-class helpers ---
+
+
+def test_prepare_tuning_leaves_dda_untouched(dummy_tolerance_calculator):
+    tc = dummy_tolerance_calculator
+    dda = tc.duplicate_detection_algorithm_object
+    before = dda.get_filled_dataset_array().copy()
+    tuning = tc._prepare_tuning()
+    assert tuning is not dda
+    assert type(tuning) is type(dda)
+    assert np.array_equal(tc.tuning_array, before)
+    assert np.array_equal(dda.get_filled_dataset_array(), before)
+
+
+def test_tolerance_upper_bound():
+    dda = DistanceMatrix(dataset_array=np.array([[0.0, 0.0], [1.0, 1.0]]))
+    from tests.conftest import DummyToleranceCalculator
+
+    tc = DummyToleranceCalculator(dda)
+    tc._prepare_tuning()
+    assert tc.tolerance_upper_bound() > 2.0  # above the largest L1 distance
+
+
+def test_binary_search_tolerance_finds_target():
+    rng = np.random.default_rng(0)
+    data = np.repeat(rng.uniform(0, 10, (20, 4)), 3, axis=0) + rng.normal(
+        0, 1e-3, (60, 4)
     )
+    dda = DistanceMatrix(dataset_array=data)
+    from tests.conftest import DummyToleranceCalculator
+
+    tc = DummyToleranceCalculator(dda, binary_search_steps=40)
+    tuning = tc._prepare_tuning()
+    tol = tc.binary_search_tolerance(tuning, 20, find_largest_tolerance_for_target=True)
+    tuning.tolerance = tol
+    assert tuning.get_dataset_unique_structures() == 20
+    assert dda.tolerance != tol  # user's DDA untouched
 
 
-def test_binary_search_tolerance(dummy_tolerance_calculator):
+def test_binary_search_zero_steps_warns_and_returns_upper_bound(
+    dummy_tolerance_calculator,
+):
+    tc = dummy_tolerance_calculator
+    tuning = tc._prepare_tuning()
+    tc.binary_search_steps = 0
+    with pytest.warns(UserWarning, match="No binary search performed"):
+        tol = tc.binary_search_tolerance(tuning, 1)
+    assert tol == tc.tolerance_upper_bound()
 
-    def run_per_seed(seed: int, target: int):
-        dummy_tolerance_calculator.create_perturbed_dataset(seed=seed)
-        tolerance = dummy_tolerance_calculator.binary_search_tolerance(
-            target_unique_vectors=1, find_largest_tolerance_for_target=True
-        )
-        assert np.isclose(tolerance, target, atol=0.05)
 
-    dummy_tolerance_calculator.perturbation_scale = 0.001
-    dummy_tolerance_calculator.perturbations_per_vector = 5
+def test_binary_search_no_exact_target_warns():
+    data = np.array([[0.0], [1.0], [10.0]])
+    from tests.conftest import DummyToleranceCalculator
 
-    dummy_tolerance_calculator.binary_search_steps = 0
-    dummy_tolerance_calculator.create_perturbed_dataset(seed=803)
-    original_best_max = (
-        (
-            np.ptp(dummy_tolerance_calculator.tolerance_dataset_array)
-            + np.mean(
-                np.std(dummy_tolerance_calculator.tolerance_dataset_array, axis=0)
-            )
-        )
-        * dummy_tolerance_calculator.duplicate_detection_algorithm_object.dataset_array.shape[
-            1
-        ]
+    tc = DummyToleranceCalculator(
+        DistanceMatrix(dataset_array=data), binary_search_steps=15
     )
-    # expected_tolerance_no_search = (
-    #     np.ptp(dummy_tolerance_calculator.tolerance_dataset_array) / 2
-    # )
-    with pytest.warns(
-        UserWarning,
-        match=f"Binary search called with {dummy_tolerance_calculator.binary_search_steps} steps. No binary search performed.\n Returning tolerance of half the range of the perturbed dataset: {original_best_max}.",
-    ):
-        assert (
-            dummy_tolerance_calculator.binary_search_tolerance(
-                target_unique_vectors=1, find_largest_tolerance_for_target=True
-            )
-            == original_best_max
-        )
-
-    # one step binary search should be half the the original best max, which is the same as the expected tolerance with no search since the original best max is calculated based on the range of the perturbed dataset
-    dummy_tolerance_calculator.binary_search_steps = 1
-    for seed in list(range(803, 1000)):
-        run_per_seed(seed, original_best_max)
+    tuning = tc._prepare_tuning()
+    with pytest.warns(UserWarning, match="No exact tolerance found"):
+        tc.binary_search_tolerance(tuning, 7)

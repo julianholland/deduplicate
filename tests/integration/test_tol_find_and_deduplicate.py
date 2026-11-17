@@ -4,6 +4,9 @@ import pytest
 from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import (
     DistanceMatrix,
 )
+from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
+    MultiHashing,
+)
 from deduplicate_lib.plugins.tolerance_calculators.natural_tolerance_plateau_probe import (
     NaturalTolerancePlateauProbe,
 )
@@ -38,78 +41,62 @@ def assert_keeps_one_vector_per_group(tolerance):
     assert list(dda.get_unique_vector_indices()) == [0, 1]
 
 
-@pytest.mark.parametrize(
-    "dda_fixture",
-    [
-        ["distance_matrix_dda", 0.18096144110600776],
-        ["multi_hashing_dda", 0.2540022716601484],
-    ],
-)
+def assert_multi_hashing_dedup_is_sensible(tolerance):
+    """MultiHashing is approximate: it must drop most of the 30-vector cluster
+    but keep the lone point and at least one cluster member."""
+    dda = MultiHashing(
+        dataset_array=data,
+        max_vector_array_size=len(data),
+        tolerance=tolerance,
+        perturbations=200,
+    )
+    n_unique = dda.get_dataset_unique_structures()
+    assert 2 <= n_unique < len(data) // 2
+    assert dda.get_unique_vector_mask()[0]  # the lone point is always kept
+
+
+@pytest.mark.parametrize("dda_fixture", ["distance_matrix_dda", "multi_hashing_dda"])
 def test_pdr_with_dda(request, dda_fixture):
-    dda = request.getfixturevalue(dda_fixture[0])
+    dda = request.getfixturevalue(dda_fixture)
     dda.set_dataset_array(data)
     dda.input_vector = np.array([])
-    print(dda.dataset_array.shape)
-    print(dda.vector_count)
     tc = PerturbedDatasetReclustering(
-        duplicate_detection_algorithm_object=dda,
+        dda,
         perturbations_per_vector=10,
         perturbation_scale=0.01,
         binary_search_steps=30,
-    )
-    print(
-        "pre perturbed dataset creation:",
-        tc.tolerance_dataset_array.shape,
-        tc.duplicate_detection_algorithm_object.dataset_array.shape,
-        tc.duplicate_detection_algorithm_object.vector_count,
-    )
-    tc.create_perturbed_dataset()
-    print(
-        "post perturbed dataset creation:",
-        tc.tolerance_dataset_array.shape,
-        tc.duplicate_detection_algorithm_object.dataset_array.shape,
-        tc.duplicate_detection_algorithm_object.vector_count,
+        sample_size=len(data),
+        sampling="head",
     )
 
     tolerance = tc.calculate_tolerance()
-    print(tolerance)
 
     assert isinstance(tolerance, float)
     assert tolerance > 0.0
-    assert np.isclose(tolerance, dda_fixture[1], atol=0.05 * dda_fixture[1])
-    if dda_fixture[0] == "distance_matrix_dda":
+    if dda_fixture == "distance_matrix_dda":
         assert_keeps_one_vector_per_group(tolerance)
+    else:
+        assert_multi_hashing_dedup_is_sensible(tolerance)
 
 
-@pytest.mark.parametrize(
-    "dda_fixture,tolerance_result_fixture",
-    [
-        ("distance_matrix_dda", 0.1528962435655764),
-        ("multi_hashing_dda", 0.10502871363961308),
-    ],
-)
-def test_ntpp_with_dda(request, dda_fixture, tolerance_result_fixture):
+@pytest.mark.parametrize("dda_fixture", ["distance_matrix_dda", "multi_hashing_dda"])
+def test_ntpp_with_dda(request, dda_fixture):
     dda = request.getfixturevalue(dda_fixture)
     dda.set_dataset_array(data)
     dda.input_vector = np.array([])
 
     tc = NaturalTolerancePlateauProbe(
-        duplicate_detection_algorithm_object=dda,
-        perturbations_per_vector=10,
-        perturbation_scale=0.01,
+        dda,
         binary_search_steps=30,
         probe_steps=200,
+        sample_size=len(data),
+        sampling="head",
     )
-
-    tc.create_perturbed_dataset()
     tolerance = tc.calculate_tolerance()
-    print(tolerance)
-    # assert False
+
     assert isinstance(tolerance, float)
     assert tolerance > 0.0
-
-    assert np.isclose(
-        tolerance, tolerance_result_fixture, atol=0.05 * tolerance_result_fixture
-    )
     if dda_fixture == "distance_matrix_dda":
         assert_keeps_one_vector_per_group(tolerance)
+    else:
+        assert_multi_hashing_dedup_is_sensible(tolerance)

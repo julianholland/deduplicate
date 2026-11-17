@@ -1,6 +1,9 @@
+import warnings
+
 import numpy as np
 import pytest
 
+from deduplicate_lib.core import resources
 from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import (
     DistanceMatrix,
 )
@@ -177,3 +180,50 @@ def test_agrees_with_multi_hashing_on_separated_clusters():
     )
     mh.get_dataset_unique_structures()
     assert [int(i) for i in mh.get_unique_vector_indices()] == first_of_each_cluster
+
+
+# --- set_dataset_store must refuse before dropping the in-memory data ---
+
+
+def test_set_dataset_store_refusal_leaves_dda_untouched(tmp_path):
+    data = np.array([[0.0, 0.0], [5.0, 5.0], [5.01, 5.0]])
+    np.save(tmp_path / "big.npy", np.zeros((4, 2)))
+    dda = DistanceMatrix(tolerance=0.1, dataset_array=data, max_vector_array_size=10)
+    with pytest.raises(ValueError, match="out-of-core"):
+        dda.set_dataset_store(tmp_path / "big.npy")
+    assert not dda.is_out_of_core
+    assert dda.vector_count == 3
+    assert np.array_equal(dda.dataset_array[:3], data)
+    assert dda.get_dataset_unique_structures() == 2
+
+
+# --- memory_limit: explicit limits refuse, "auto" only warns ---
+
+
+def test_explicit_memory_limit_raises_memory_error():
+    with pytest.raises(MemoryError):
+        DistanceMatrix(tolerance=0.1, dataset_array=np.zeros((2, 2)), memory_limit=1000)
+
+
+def test_auto_memory_limit_only_warns(monkeypatch):
+    monkeypatch.setattr(resources, "available_memory", lambda: 2000)
+    with pytest.warns(ResourceWarning):
+        dda = DistanceMatrix(tolerance=0.1, dataset_array=np.zeros((2, 2)))
+    assert dda.memory_limit_is_auto
+    assert dda.vector_count == 2
+
+
+def test_memory_limit_is_auto_flag():
+    dda = DistanceMatrix(
+        tolerance=0.1, dataset_array=np.zeros((2, 2)), max_vector_array_size=10
+    )
+    assert dda.memory_limit_is_auto
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        explicit = DistanceMatrix(
+            tolerance=0.1,
+            dataset_array=np.zeros((2, 2)),
+            max_vector_array_size=10,
+            memory_limit="1GB",
+        )
+    assert not explicit.memory_limit_is_auto

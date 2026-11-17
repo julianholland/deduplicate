@@ -49,6 +49,20 @@ dda.input_vector = np.array([1.0, 2.0])
 print(dda.duplicate_check())  # True
 ```
 
+### Large datasets
+
+Datasets too large for memory can be deduplicated straight from disk (`.npy`, HDF5, or any
+source via `CallableStore`), in chunks sized by `memory_limit`:
+
+```python
+dda = MultiHashing(dataset="descriptors.npy", tolerance=0.05, memory_limit="8GB", n_threads=8)
+dda.get_dataset_unique_structures()
+mask = dda.get_unique_vector_mask()   # boolean mask over the dataset
+dda.deduplicate()                     # writes descriptors_unique.npy
+```
+
+Optional extras: `pip install deduplicate_lib[hdf5,progress]`.
+
 See the **[full documentation](https://deduplicate-lib.readthedocs.io)** for API reference, tolerance tuning, and more examples.
 
 ### Dependencies

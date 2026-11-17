@@ -1,7 +1,14 @@
+import logging
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 import numpy as np
 from numba import njit
+
+from deduplicate_lib.core import resources
+from deduplicate_lib.core.vector_store import InMemoryStore, VectorStore, open_store
+
+logger = logging.getLogger(__name__)
 
 
 @njit
@@ -85,6 +92,13 @@ class DuplicateDetectionAlgorithm(ABC):
     ``max_vector_array_size`` rows to avoid repeated reallocation.  Load data via
     ``set_dataset_array()``; never assign to ``dataset_array`` directly.
 
+    Datasets too large for memory can instead be given as ``dataset``: a
+    ``.npy``/``.h5`` path or a :class:`~deduplicate_lib.core.vector_store.VectorStore`
+    (e.g. a ``CallableStore`` over a database).  They are then read in chunks
+    sized by ``memory_limit`` and never loaded whole; ``dataset_array`` is not
+    available for them, and algorithms that need the whole dataset in memory
+    (``DistanceMatrix``) refuse them.
+
     Parameters
     ----------
     tolerance : float
@@ -105,6 +119,18 @@ class DuplicateDetectionAlgorithm(ABC):
     max_vector_array_size : int, optional
         Maximum number of vectors the pre-allocated arrays can hold.
         Defaults to 10000.
+    dataset : str, Path or VectorStore, optional
+        On-disk (or otherwise out-of-core) dataset, instead of ``dataset_array``.
+        A numpy array is accepted too and treated like ``dataset_array``.
+    memory_limit : int, str or None, optional
+        Memory budget for chunked processing, in bytes or as a string such as
+        ``"8GB"``.  ``"auto"`` (default) uses half of the available memory.
+        Also the size above which ``deduplicate()`` writes its result to a file
+        instead of returning it.
+    n_threads : int, optional
+        Threads used by parallel kernels.  ``None`` (default) keeps numba's setting.
+    progress : bool, optional
+        Show progress bars for long computations (needs ``tqdm``).
     """
 
     ALLOWED_DISTANCES = DISTANCE_FUNCTIONS
@@ -118,6 +144,10 @@ class DuplicateDetectionAlgorithm(ABC):
         distance_metric: str = "euclidean",
         unique_vector_indices: np.ndarray = np.array([]),
         max_vector_array_size: int = 10000,
+        dataset: str | Path | VectorStore | np.ndarray | None = None,
+        memory_limit: int | float | str | None = "auto",
+        n_threads: int | None = None,
+        progress: bool = False,
     ) -> None:
         self.tolerance = tolerance
         self.input_vector = input_vector
@@ -131,11 +161,100 @@ class DuplicateDetectionAlgorithm(ABC):
         self.max_vector_array_size = max_vector_array_size
         self._dirty = True  # auxiliary structures (distance matrix, hash dict, ...) need (re)building
         self.vector_count = 0
+        self._store: VectorStore | None = None  # set for out-of-core datasets only
+        # whether the limit was derived from the free memory ("auto") rather
+        # than given: algorithms only refuse work over an explicit limit
+        self.memory_limit_is_auto = memory_limit is None or (
+            isinstance(memory_limit, str) and memory_limit.strip().lower() == "auto"
+        )
+        self.memory_limit = resources.parse_memory_limit(memory_limit)
+        if n_threads is not None and (
+            not isinstance(n_threads, int)
+            or isinstance(n_threads, bool)
+            or n_threads < 1
+        ):
+            raise ValueError("n_threads must be a positive integer or None.")
+        self.n_threads = n_threads
+        self.progress = progress
+
+        if dataset is not None and dataset_array.size > 0:
+            raise ValueError("Pass either dataset_array or dataset, not both.")
+        if isinstance(dataset, np.ndarray):
+            dataset_array = dataset
+            dataset = None
 
         self.set_dataset_array(dataset_array) if dataset_array.size > 0 else None
+        if dataset is not None:
+            self.set_dataset_store(dataset)
+
+    @property
+    def is_out_of_core(self) -> bool:
+        """Whether the dataset is read from a store in chunks rather than held in memory."""
+        return self._store is not None
+
+    @property
+    def store(self) -> VectorStore:
+        """The dataset as a :class:`VectorStore` (an in-memory view for in-memory datasets)."""
+        if self._store is not None:
+            return self._store
+        if self._dataset_array.ndim != 2:
+            return InMemoryStore(np.empty((0, self.get_vector_length())))
+        return InMemoryStore(self._dataset_array[: self.vector_count])
+
+    def set_dataset_store(self, dataset, key: str = "vectors") -> None:
+        """Use an out-of-core dataset: a ``.npy``/``.h5`` path or a VectorStore."""
+        store = open_store(dataset, key=key)
+        if store.in_memory:
+            self.set_dataset_array(np.asarray(store.read(0, len(store))))
+            return
+        self._store = store
+        self._set_dataset_array_internal(np.array([]))
+        self.vector_count = len(store)
+        self.unique_vector_indices = np.array([])
+        self._dirty = True
+        logger.info("Using out-of-core dataset %r.", store)
+
+    def _init_kwargs(self) -> dict:
+        """Constructor arguments that reproduce this DDA's settings (not its data).
+
+        Subclasses with extra settings extend this via ``super()``.
+        """
+        return {
+            "tolerance": self.tolerance,
+            "distance_metric": self.distance_metric,
+            "memory_limit": "auto" if self.memory_limit_is_auto else self.memory_limit,
+            "n_threads": self.n_threads,
+            "progress": False,
+        }
+
+    def tuning_copy(self, array: np.ndarray) -> "DuplicateDetectionAlgorithm":
+        """A new, independent in-memory DDA with these settings over ``array``.
+
+        Tolerance calculators tune on such a copy, so the DDA they were given
+        (its dataset, store, index and precomputed structures) is never touched.
+        """
+        array = np.asarray(array)
+        return type(self)(
+            **self._init_kwargs(),
+            dataset_array=array,
+            max_vector_array_size=max(len(array), 1),
+        )
+
+    def chunk_rows(self) -> int:
+        """Rows per chunk when reading the dataset, from ``memory_limit``."""
+        return resources.chunk_rows(self.store.dim, self.memory_limit)
+
+    def _out_of_core_error(self, what: str) -> ValueError:
+        return ValueError(
+            f"{what} is not available: the dataset is out-of-core ({self._store!r}) "
+            "and is never loaded into memory as a whole. Use deduplicate(out=...), "
+            "get_unique_vector_mask(), or read rows with .store.read()/.store.take()."
+        )
 
     @property
     def dataset_array(self) -> np.ndarray:
+        if self._store is not None:
+            raise self._out_of_core_error("dataset_array")
         view = self._dataset_array.view()
         view.flags.writeable = False
         return view
@@ -233,28 +352,62 @@ class DuplicateDetectionAlgorithm(ABC):
         """Append `input_vector` to the dataset array and incrementally update any auxiliary structures. Overridden by child classes."""
         pass
 
-    def get_unique_vector_indices(self) -> np.ndarray:
-        """Returns the indices of the unique vectors in the dataset."""
+    def get_unique_vector_mask(self) -> np.ndarray:
+        """Returns a boolean mask over the dataset, ``True`` for unique vectors."""
         if self.unique_vector_indices.shape[0] != self.vector_count:
             raise ValueError(
                 "Unique vector indices array shape does not match dataset; please run get_dataset_unique_structures() to update the unique vector indices before calling this method."
             )
-        return np.where(self.unique_vector_indices)[0]
+        return np.asarray(self.unique_vector_indices, dtype=bool).copy()
 
-    def deduplicate(self):
-        """Return all unique vectors in the dataset as a new array.
+    def get_unique_vector_indices(self) -> np.ndarray:
+        """Returns the indices of the unique vectors in the dataset."""
+        return np.where(self.get_unique_vector_mask())[0]
+
+    def deduplicate(self, out: str | Path | None = None):
+        """Return the unique vectors, or write them to a file.
+
+        Parameters
+        ----------
+        out : str or Path, optional
+            File to write the unique vectors to (``.npy``, ``.h5``/``.hdf5``).
 
         Returns
         -------
-        np.ndarray
-            2-D array whose rows are the unique vectors.
+        np.ndarray or VectorStore
+            For an in-memory dataset with no ``out``, a 2-D array whose rows are
+            the unique vectors.  Otherwise the unique vectors are streamed to
+            ``out`` and the written file is returned, opened as a store (its
+            ``.path`` says where).  Out-of-core datasets default to
+            ``<input>_unique.<ext>`` next to the input when ``out`` is not given.
 
         Notes
         -----
-        Calls ``get_dataset_unique_structures()`` (via ``pre_dda_processing``) to
-        ensure auxiliary structures are up to date before selecting unique rows.
+        Calls ``get_dataset_unique_structures()`` first, so the result always
+        reflects the current dataset and ``tolerance``.
         """
-        return self.dataset_array[self.get_unique_vector_indices()]
+        self.get_dataset_unique_structures()
+        mask = self.get_unique_vector_mask()
+        n_unique = int(mask.sum())
+        result_bytes = n_unique * self.store.dim * self.store.dtype.itemsize
+
+        if out is None and not self.is_out_of_core:
+            if result_bytes > self.memory_limit:
+                logger.warning(
+                    "The %d unique vectors (%d bytes) exceed memory_limit (%d bytes); "
+                    "returning them anyway. Pass deduplicate(out=...) to write them "
+                    "to a file instead.",
+                    n_unique,
+                    result_bytes,
+                    self.memory_limit,
+                )
+            return self.get_filled_dataset_array()[mask]
+
+        if out is None:
+            out = self.store.default_output_path()
+        written = self.store.write_subset(mask, out, chunk_rows=self.chunk_rows())
+        logger.info("Wrote %d unique vectors to %s.", n_unique, written.path)
+        return written
 
     def initialize_dataset_array(self, vector_length: int) -> None:
         self._set_dataset_array_internal(
@@ -267,6 +420,8 @@ class DuplicateDetectionAlgorithm(ABC):
         )
 
     def get_filled_dataset_array(self) -> np.ndarray:
+        if self._store is not None:
+            raise self._out_of_core_error("get_filled_dataset_array()")
         return self._dataset_array[: self.vector_count]
 
     def get_filled_distance_matrix(self) -> np.ndarray:
@@ -274,7 +429,13 @@ class DuplicateDetectionAlgorithm(ABC):
 
     def set_dataset_array(self, new_dataset_array: np.ndarray) -> None:
         """Create new dataset array with correct shape and vector count
-        if the input vector and dataset are both empty then the vector length cannot be determined, so we initialize an empty dataset array"""
+        if the input vector and dataset are both empty then the vector length cannot be determined, so we initialize an empty dataset array
+
+        Replaces an out-of-core dataset, if one was set, with the in-memory array."""
+        if self._store is not None:
+            self._store = None
+            self.vector_count = 0
+            self._dirty = True
         current_dataset_array = self._dataset_array[: self.vector_count]
         if new_dataset_array.shape == current_dataset_array.shape and np.array_equal(
             new_dataset_array, current_dataset_array
@@ -296,11 +457,20 @@ class DuplicateDetectionAlgorithm(ABC):
         self._dirty = True
 
     def get_vector_length(self) -> int:
+        if self._store is not None:
+            if (
+                self.input_vector.size > 0
+                and self.input_vector.shape[0] != self._store.dim
+            ):
+                raise ValueError(
+                    "Input vector length does not match dataset vector length."
+                )
+            return self._store.dim
+
         has_input = self.input_vector.size > 0
         has_dataset = self._dataset_array.size > 0
 
         if has_input and has_dataset:
-            print(self.input_vector.shape, self._dataset_array.shape)
             if self.input_vector.shape[0] != self._dataset_array.shape[1]:
                 raise ValueError(
                     "Input vector length does not match dataset vector length."
@@ -320,6 +490,8 @@ class DuplicateDetectionAlgorithm(ABC):
 
     def preinitialize_dataset_array(self) -> None:
         vector_length = self.get_vector_length()
+        if self._store is not None:
+            return  # out-of-core datasets are read in chunks, never preallocated
 
         if self._dataset_array.shape[0] > self.max_vector_array_size:
             raise ValueError("Dataset array size exceeds maximum allowed size.")

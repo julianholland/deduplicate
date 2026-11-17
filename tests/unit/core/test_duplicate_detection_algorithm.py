@@ -2,6 +2,7 @@ import re
 
 import numpy as np
 import pytest
+from tests.conftest import DummyDDA
 
 from deduplicate_lib.core.duplicate_detection_algorithm import (
     DuplicateDetectionAlgorithm,
@@ -10,6 +11,12 @@ from deduplicate_lib.core.duplicate_detection_algorithm import (
     fast_compute_distance_matrix,
     hamming_distance,
     manhattan_distance,
+)
+from deduplicate_lib.plugins.duplicate_detection_algorithms.distance_matrix import (
+    DistanceMatrix,
+)
+from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
+    MultiHashing,
 )
 
 
@@ -394,3 +401,57 @@ def test_deduplicate(dummy_dda):
     assert deduplicated_dataset.shape == (2, 2)
     assert np.array_equal(deduplicated_dataset, np.array([[1.0, 2.0], [10.0, 20.0]]))
     dda.set_dataset_array(np.array([[1.0, 2.0]]))
+
+
+def test_get_unique_vector_mask_and_indices():
+    dda = DummyDDA(tolerance=0.1, dataset_array=np.array([[1.0], [2.0], [3.0], [4.0]]))
+    dda.unique_vector_indices = np.array([True, False, True, False])
+    mask = dda.get_unique_vector_mask()
+    assert mask.dtype == bool
+    assert mask.tolist() == [True, False, True, False]
+    assert dda.get_unique_vector_indices().tolist() == [0, 2]
+    mask[0] = False  # a copy: mutating it leaves the DDA untouched
+    assert dda.get_unique_vector_mask()[0]
+
+
+def test_get_unique_vector_mask_with_mismatch(dummy_dda):
+    dummy_dda.unique_vector_indices = np.array([True, True, True])
+    with pytest.raises(ValueError, match="does not match dataset"):
+        dummy_dda.get_unique_vector_mask()
+
+
+# --- deduplicate() must not use a stale mask ---
+
+
+def test_deduplicate_follows_tolerance_change():
+    data = np.random.default_rng(0).uniform(size=(50, 4))
+    dda = MultiHashing(
+        tolerance=0.01, perturbations=20, dataset_array=data, max_vector_array_size=60
+    )
+    assert len(dda.deduplicate()) == 50
+
+    dda.tolerance = 10.0
+    result = dda.deduplicate()
+    assert len(result) == dda.get_dataset_unique_structures() == 1
+
+
+def test_deduplicate_follows_same_size_dataset_replacement_multi_hashing():
+    rng = np.random.default_rng(1)
+    dda = MultiHashing(
+        tolerance=0.01, perturbations=20, dataset_array=rng.uniform(size=(8, 3))
+    )
+    assert len(dda.deduplicate()) == 8
+    dda.set_dataset_array(np.tile(rng.uniform(size=(1, 3)), (8, 1)))
+    assert len(dda.deduplicate()) == 1
+
+
+def test_deduplicate_follows_same_size_dataset_replacement_distance_matrix():
+    distinct = np.arange(5, dtype=float).reshape(5, 1) * 10
+    dda = DistanceMatrix(
+        tolerance=0.1, dataset_array=distinct, max_vector_array_size=10
+    )
+    assert len(dda.deduplicate()) == 5
+    dda.set_dataset_array(np.ones((5, 1)))  # same shape, all duplicates
+    result = dda.deduplicate()
+    assert len(result) == 1
+    assert np.array_equal(result, [[1.0]])
