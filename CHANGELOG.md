@@ -2,6 +2,45 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.1.0] - 2026-11-23
+
+### Changed
+- `MultiHashing(index_dir=...)` saves appended hashes incrementally. A save used to
+  rewrite every perturbation's whole table (tens of GB for tens of millions of
+  vectors), so the cost of appending grew with the size of the index. Now each save
+  writes the new hashes as a small sorted **delta segment** per perturbation, and
+  segments of similar size are merged (a new segment absorbs older ones up to
+  `COMPACTION_RATIO` = 2 times its size, and becomes the new base table once it
+  reaches half of it). A table holds O(log n) segments, each hash is rewritten
+  O(log n) times, and the amortised cost of an append no longer grows with the index.
+  Lookups search the base table and every delta.
+- Index format 3: `metadata.json` gains `delta_files` (per perturbation, oldest
+  first). Format 2 indexes still open and are upgraded on their next commit; older
+  deduplicate_lib versions refuse format 3.
+- Index lookups read one page of a table that does not fit in the page cache. Each
+  segment file has a small **fence** sidecar (`<segment>.fence.npy`, the first hash
+  of every 4 KiB page, ~1/512 of the table) kept in memory as a `SortedSegment`
+  (`core/sorted_segment.py`), so a lookup searches the fence and then a single page
+  instead of binary-searching the memory-mapped table (~log2 n cold pages). A single
+  vector's lookups (`duplicate_check()`, `add_input_vector_to_dda()`) first ask the
+  kernel for all their pages at once (`madvise(MADV_WILLNEED)`), so the disk reads
+  them concurrently. Missing sidecars are recomputed when a segment is loaded.
+- Pending hashes (added since the last merge / index save) are kept in sorted
+  `uint64` arrays (`core/pending_hashes.py`, `PendingHashes`: ~8 bytes per hash)
+  instead of Python sets (~60-100 bytes per hash), so many more vectors can be added
+  between saves; single additions go through a small set that spills into an array.
+  An index now saves when pending hashes pass `memory_limit / 4 / 16` (was `/ 100`),
+  i.e. less often for the same `memory_limit`.
+- Index saves append the new vectors' unique counts to the counts file (now raw
+  `counts.g<N>.bin`, only the first `n_vectors` entries committed) instead of
+  rewriting all of them, so a save no longer costs O(dataset size). `.npy` counts
+  files from earlier versions still open; the build still writes a new file.
+
+### Documentation
+- `docs/large_datasets.rst`: what an index save writes (only new segments and
+  counts), how lookups behave once the index outgrows memory (one page per lookup;
+  prefer large `add_vectors()` batches), and the disk space for fences and merges.
+
 ## [1.0.0] - 2026-11-17
 
 ### Changed

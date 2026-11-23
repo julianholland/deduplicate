@@ -125,10 +125,20 @@ What the index does for you:
   (e.g. by a job time limit), running the same code again hashes only the
   perturbations still missing.
 * **Appends.** ``add_vectors()`` and ``add_input_vector_to_dda()`` add to the
-  tables; ``flush()`` saves them (it also happens automatically when the pending
-  hashes grow large).  Vectors appended to an HDF5 dataset but never flushed,
-  or added to the file by other code, are hashed and saved the next time the
-  index is opened.
+  tables; ``flush()`` saves them (it also happens automatically once the pending
+  hashes reach ``memory_limit / 4`` at ~16 bytes each).  A save writes only what
+  is new: the new hashes as a small sorted segment per perturbation, merged
+  with earlier segments of similar size, and the new vectors' counts appended
+  to the counts file, so its cost does not grow with the index.  Vectors
+  appended to an HDF5 dataset but never flushed, or added to the file by other
+  code, are hashed and saved the next time the index is opened.
+* **Indexes larger than memory.** Only a small sample of each table (one hash
+  per 4 KiB page, ~0.2% of the index) is held in memory; a lookup reads just the
+  one page that can hold its hash, from the page cache or from disk.  Once the
+  index outgrows the page cache, ``duplicate_check()`` costs up to one disk
+  read per perturbation, while ``add_vectors()`` with large batches reads the
+  tables roughly sequentially and stays far cheaper per vector.  Prefer large
+  ``add_vectors()`` batches over single additions for bulk ingestion.
 * **Crash safety.** ``metadata.json`` is the commit point and is replaced
   atomically; table files are never overwritten, only superseded, so an
   interrupted write leaves the previous commit intact.  Files are fsynced before
@@ -137,8 +147,11 @@ What the index does for you:
   killed processes but not against power loss.
 
 Disk use is one ``uint64`` per distinct hash per perturbation: 3.7 GB for
-7M vectors (1.75M distinct groups) × 200 perturbations.  One process should
-write to an index at a time.
+7M vectors (1.75M distinct groups) × 200 perturbations.  Each table file has a
+small fence sidecar (~0.2% of its size).  When appended segments are merged into
+a table's base file, the old and new files coexist until the commit, so leave
+free disk space of about the size of the index.  One process should write to an
+index at a time.
 
 
 Choosing a tolerance
