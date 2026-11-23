@@ -1,5 +1,6 @@
 """MultiHashing with a persistent hash index (index_dir)."""
 
+import itertools
 import json
 import logging
 
@@ -12,7 +13,9 @@ from deduplicate_lib.core.hash_index import (
     METADATA_FILE,
     HashIndex,
     IndexMismatchError,
+    fence_name,
 )
+from deduplicate_lib.core.sorted_segment import SortedSegment
 from deduplicate_lib.core.vector_store import CallableStore, HDF5Store
 from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
     MultiHashing,
@@ -73,9 +76,18 @@ def test_build_writes_index_and_matches_in_memory(tmp_path):
     assert metadata["seed"] == 5
     assert all(metadata["hash_files"])
     files = {f.name for f in index_dir.iterdir()}
-    assert files == {METADATA_FILE, metadata["counts_file"], *metadata["hash_files"]}
+    fences = {fence_name(name) for name in metadata["hash_files"]}
+    assert files == {
+        METADATA_FILE,
+        metadata["counts_file"],
+        *metadata["hash_files"],
+        *fences,
+    }
     # the tables are memory-mapped from the index, not held in memory
-    assert all(isinstance(t, np.memmap) for t in dda.sorted_hashes)
+    assert all(
+        isinstance(t, SortedSegment) and isinstance(t.table, np.memmap)
+        for t in dda.sorted_hashes
+    )
 
 
 def test_index_keeps_tables_even_when_memory_is_tight(tmp_path):
@@ -172,7 +184,12 @@ def test_interrupted_build_resumes(tmp_path, monkeypatch):
     # the uncommitted tables of the crashed batch were cleaned up
     metadata = json.loads((tmp_path / "idx" / METADATA_FILE).read_text())
     files = {f.name for f in (tmp_path / "idx").iterdir()}
-    assert files == {METADATA_FILE, metadata["counts_file"], *metadata["hash_files"]}
+    assert files == {
+        METADATA_FILE,
+        metadata["counts_file"],
+        *metadata["hash_files"],
+        *(fence_name(name) for name in metadata["hash_files"] if name),
+    }
 
 
 @pytest.mark.parametrize(
@@ -514,3 +531,285 @@ def test_fingerprint_ignores_previous_with_other_block_size(monkeypatch):
     )
     assert result == hash_index.dataset_fingerprint(recording_store(data, []), 30)
     assert min(start for start, _ in reads) == 0
+
+
+# --- delta segments (format 3) ------------------------------------------------
+
+
+def _segment_sizes(index_dir, perturbation=0):
+    metadata = json.loads((index_dir / METADATA_FILE).read_text())
+    base = np.load(index_dir / metadata["hash_files"][perturbation], mmap_mode="r")
+    deltas = [
+        np.load(index_dir / name, mmap_mode="r")
+        for name in metadata["delta_files"][perturbation]
+    ]
+    return base.shape[0], [d.shape[0] for d in deltas]
+
+
+def test_saves_write_delta_segments_and_compact_geometrically(tmp_path, monkeypatch):
+    """Many small saves: each writes a delta instead of rewriting the base table,
+    deltas stay few and geometrically sized, and the answers match a fresh build."""
+    monkeypatch.setattr(MultiHashing, "_pending_limit", lambda self: 30)
+    path = hdf5_dataset(tmp_path, DATA[:150])
+    index_dir = tmp_path / "idx"
+    dda = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    dda.get_dataset_unique_structures()
+    base_file = json.loads((index_dir / METADATA_FILE).read_text())["hash_files"][0]
+
+    saves = []
+    original_save = dda._save_index
+    monkeypatch.setattr(dda, "_save_index", lambda: (saves.append(1), original_save()))
+    for vector in DATA[150:]:
+        dda.input_vector = vector
+        assert dda.duplicate_check() == _reference_duplicate(dda, vector)
+        dda.add_input_vector_to_dda()
+        metadata = json.loads((index_dir / METADATA_FILE).read_text())
+        assert metadata["format_version"] == 3
+        for perturbation in range(dda.perturbations):
+            n_deltas = len(metadata["delta_files"][perturbation])
+            assert n_deltas <= 8  # O(log n) segments
+    dda.flush()
+    assert len(saves) > 10
+
+    # the hashes of a perturbation are spread over distinct, sorted segments
+    for perturbation in range(dda.perturbations):
+        segments = dda._segments(perturbation)
+        joined = np.concatenate([np.asarray(s) for s in segments])
+        assert len(np.unique(joined)) == len(joined)
+        assert all(
+            np.all(np.diff(np.asarray(s).astype(np.int64)) != 0) for s in segments
+        )
+        in_memory = MultiHashing(dataset_array=DATA, **MH_KWARGS)
+        in_memory.get_dataset_unique_structures()
+        assert np.array_equal(np.sort(joined), in_memory.sorted_hashes[perturbation])
+
+    # deltas grow geometrically: each is more than COMPACTION_RATIO x the next newer one
+    from deduplicate_lib.plugins.duplicate_detection_algorithms.multi_hashing import (
+        COMPACTION_RATIO,
+    )
+
+    for perturbation in range(dda.perturbations):
+        _, sizes = _segment_sizes(index_dir, perturbation)
+        assert all(a > COMPACTION_RATIO * b for a, b in itertools.pairwise(sizes))
+
+    dda.get_dataset_unique_structures()
+    assert np.array_equal(dda.get_unique_vector_mask(), fresh_mask())
+    no_hashing(monkeypatch)
+    reopened = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    reopened.get_dataset_unique_structures()
+    assert np.array_equal(reopened.get_unique_vector_mask(), fresh_mask())
+    for vector in DATA[:20]:  # lookups against the reopened segments
+        reopened.input_vector = vector
+        assert reopened.duplicate_check()
+    files = {f.name for f in index_dir.iterdir()}
+    metadata = json.loads((index_dir / METADATA_FILE).read_text())
+    referenced = {metadata["counts_file"], *metadata["hash_files"]}
+    referenced |= {name for names in metadata["delta_files"] for name in names}
+    referenced |= {fence_name(name) for name in referenced if name.startswith("p")}
+    assert files == {METADATA_FILE, *referenced}  # superseded segments are deleted
+    assert (
+        base_file not in files
+    )  # the deltas grew to half the base and were merged into it
+
+
+def _reference_duplicate(dda, vector):
+    """duplicate_check() computed from all hashes so far, without segments."""
+    hashes = dda.create_hash_vector(vector)
+    seen = 0
+    for perturbation, value in enumerate(hashes):
+        everything = np.concatenate(
+            [np.asarray(s) for s in dda._segments(perturbation)]
+            + [dda._pending_hashes[perturbation].sorted()]
+        )
+        seen += bool(np.isin(value, everything))
+    return seen / dda.perturbations >= dda.acceptance_threshold
+
+
+def test_a_save_writes_only_the_new_hashes(tmp_path, monkeypatch):
+    index_dir = tmp_path / "idx"
+    path = hdf5_dataset(tmp_path, DATA[:250])
+    dda = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    dda.get_dataset_unique_structures()
+    base_before, _ = _segment_sizes(index_dir)
+    written = []
+    original = HashIndex._save
+    monkeypatch.setattr(
+        HashIndex,
+        "_save",
+        lambda self, name, array: (
+            written.append(len(array)),
+            original(self, name, array),
+        ),
+    )
+    dda.add_vectors(DATA[250:260])
+    dda.flush()
+    tables = list(written[:-1])  # the last write is the counts file
+    assert max(tables) < base_before / 2  # small deltas, not the whole table
+    base_after, deltas = _segment_sizes(index_dir)
+    assert base_after == base_before and len(deltas) == 1
+
+
+def test_format_2_index_opens_and_upgrades(tmp_path, monkeypatch):
+    path = hdf5_dataset(tmp_path, DATA[:200])
+    index_dir = tmp_path / "idx"
+    MultiHashing(
+        dataset=path, index_dir=index_dir, **MH_KWARGS
+    ).get_dataset_unique_structures()
+    # rewrite the metadata as format 2 wrote it: no delta_files
+    metadata = json.loads((index_dir / METADATA_FILE).read_text())
+    metadata["format_version"] = 2
+    del metadata["delta_files"]
+    (index_dir / METADATA_FILE).write_text(json.dumps(metadata))
+
+    reopened = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    with monkeypatch.context() as patch:
+        no_hashing(patch)
+        reopened.get_dataset_unique_structures()
+    reopened.add_vectors(DATA[200:])
+    reopened.flush()
+    reopened.get_dataset_unique_structures()
+    assert np.array_equal(reopened.get_unique_vector_mask(), fresh_mask())
+    upgraded = json.loads((index_dir / METADATA_FILE).read_text())
+    assert upgraded["format_version"] == 3 and "delta_files" in upgraded
+
+
+def test_crash_before_commit_keeps_previous_segments(tmp_path, monkeypatch):
+    monkeypatch.setattr(MultiHashing, "_pending_limit", lambda self: 10**9)
+    path = hdf5_dataset(tmp_path, DATA[:200])
+    index_dir = tmp_path / "idx"
+    dda = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    dda.get_dataset_unique_structures()
+    dda.add_vectors(DATA[200:250])
+    dda.flush()  # one delta per perturbation
+    committed = json.loads((index_dir / METADATA_FILE).read_text())
+
+    dda.add_vectors(DATA[250:])
+
+    def crash(*_args, **_kwargs):
+        raise RuntimeError("crash")
+
+    monkeypatch.setattr(HashIndex, "commit", crash)
+    with pytest.raises(RuntimeError):
+        dda.flush()  # segments staged, never committed
+    assert json.loads((index_dir / METADATA_FILE).read_text()) == committed
+    monkeypatch.undo()
+
+    reopened = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    reopened.get_dataset_unique_structures()  # recovers the unflushed rows from the HDF5 file
+    assert np.array_equal(reopened.get_unique_vector_mask(), fresh_mask())
+    files = {f.name for f in index_dir.iterdir()}
+    metadata = json.loads((index_dir / METADATA_FILE).read_text())
+    referenced = {metadata["counts_file"], *metadata["hash_files"]}
+    referenced |= {name for names in metadata["delta_files"] for name in names}
+    referenced |= {fence_name(name) for name in referenced if name.startswith("p")}
+    assert files == {METADATA_FILE, *referenced}  # the staged files were cleaned up
+
+
+def test_segments_have_fence_sidecars(tmp_path, monkeypatch):
+    """Every committed segment has a fence file that loads with it; a missing
+    fence is recomputed, and lookups agree either way."""
+    monkeypatch.setattr(MultiHashing, "_pending_limit", lambda self: 10**9)
+    path = hdf5_dataset(tmp_path, DATA[:200])
+    index_dir = tmp_path / "idx"
+    dda = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    dda.get_dataset_unique_structures()
+    dda.add_vectors(DATA[200:])
+    dda.flush()
+    metadata = json.loads((index_dir / METADATA_FILE).read_text())
+    segment_names = [*metadata["hash_files"]]
+    segment_names += [name for names in metadata["delta_files"] for name in names]
+    assert any(metadata["delta_files"])
+    for name in segment_names:
+        assert (index_dir / fence_name(name)).exists()
+
+    index = HashIndex(index_dir, metadata)
+    stored = index.load_table(0)
+    # the stored fence (computed before writing) matches the file's page layout
+    assert np.array_equal(stored.fence, SortedSegment(stored.table).fence)
+    (index_dir / fence_name(metadata["hash_files"][0])).unlink()
+    recomputed = index.load_table(0)
+    assert np.array_equal(recomputed.fence, stored.fence)
+
+    reopened = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    reopened.get_dataset_unique_structures()
+    assert np.array_equal(reopened.get_unique_vector_mask(), fresh_mask())
+    for vector in DATA[::37]:
+        reopened.input_vector = vector
+        assert reopened.duplicate_check() == _reference_duplicate(reopened, vector)
+
+
+def test_saves_append_counts_instead_of_rewriting_them(tmp_path, monkeypatch):
+    monkeypatch.setattr(MultiHashing, "_pending_limit", lambda self: 10**9)
+    path = hdf5_dataset(tmp_path, DATA[:200])
+    index_dir = tmp_path / "idx"
+    dda = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    dda.get_dataset_unique_structures()
+    counts_file = json.loads((index_dir / METADATA_FILE).read_text())["counts_file"]
+    assert counts_file.endswith(".bin")
+
+    for start in range(200, len(DATA), 25):
+        dda.add_vectors(DATA[start : start + 25])
+        dda.flush()
+        metadata = json.loads((index_dir / METADATA_FILE).read_text())
+        assert metadata["counts_file"] == counts_file  # appended, not rewritten
+        assert (index_dir / counts_file).stat().st_size == 4 * metadata["n_vectors"]
+    dda.get_dataset_unique_structures()
+    assert np.array_equal(dda.get_unique_vector_mask(), fresh_mask())
+    reopened = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    with monkeypatch.context() as patch:
+        no_hashing(patch)
+        reopened.get_dataset_unique_structures()
+    assert np.array_equal(reopened.get_unique_vector_mask(), fresh_mask())
+
+
+def test_interrupted_counts_append_is_cut_off(tmp_path, monkeypatch):
+    monkeypatch.setattr(MultiHashing, "_pending_limit", lambda self: 10**9)
+    path = hdf5_dataset(tmp_path, DATA[:200])
+    index_dir = tmp_path / "idx"
+    dda = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    dda.get_dataset_unique_structures()
+    committed = json.loads((index_dir / METADATA_FILE).read_text())
+
+    dda.add_vectors(DATA[200:250])
+
+    def crash(*_args, **_kwargs):
+        raise RuntimeError("crash")
+
+    monkeypatch.setattr(HashIndex, "_write_metadata", crash)
+    with pytest.raises(RuntimeError):
+        dda.flush()  # counts appended, never committed
+    counts_path = index_dir / committed["counts_file"]
+    assert counts_path.stat().st_size == 4 * 250
+    assert json.loads((index_dir / METADATA_FILE).read_text()) == committed
+    monkeypatch.undo()
+    monkeypatch.setattr(MultiHashing, "_pending_limit", lambda self: 10**9)
+
+    reopened = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    reopened.get_dataset_unique_structures()  # re-adds rows 200-250 from the HDF5 file
+    reopened.add_vectors(DATA[250:])
+    reopened.flush()
+    metadata = json.loads((index_dir / METADATA_FILE).read_text())
+    assert counts_path.stat().st_size == 4 * metadata["n_vectors"] == 4 * len(DATA)
+    reopened.get_dataset_unique_structures()
+    assert np.array_equal(reopened.get_unique_vector_mask(), fresh_mask())
+
+
+def test_npy_counts_still_open_and_become_appendable(tmp_path):
+    path = hdf5_dataset(tmp_path, DATA[:200])
+    index_dir = tmp_path / "idx"
+    MultiHashing(
+        dataset=path, index_dir=index_dir, **MH_KWARGS
+    ).get_dataset_unique_structures()
+    metadata = json.loads((index_dir / METADATA_FILE).read_text())
+    counts = np.fromfile(index_dir / metadata["counts_file"], dtype="<u4")
+    np.save(index_dir / "counts.g999.npy", counts)  # as earlier versions wrote them
+    metadata["counts_file"] = "counts.g999.npy"
+    (index_dir / METADATA_FILE).write_text(json.dumps(metadata))
+
+    reopened = MultiHashing(dataset=path, index_dir=index_dir, **MH_KWARGS)
+    reopened.add_vectors(DATA[200:])
+    reopened.flush()
+    upgraded = json.loads((index_dir / METADATA_FILE).read_text())
+    assert upgraded["counts_file"].endswith(".bin")
+    reopened.get_dataset_unique_structures()
+    assert np.array_equal(reopened.get_unique_vector_mask(), fresh_mask())

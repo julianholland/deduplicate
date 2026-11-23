@@ -12,7 +12,9 @@ from deduplicate_lib.core.duplicate_detection_algorithm import (
     hamming_distance,
 )
 from deduplicate_lib.core.hash_index import HashIndex, perturbation_digest
+from deduplicate_lib.core.pending_hashes import PendingHashes
 from deduplicate_lib.core.plugin_registry import register_plugin
+from deduplicate_lib.core.sorted_segment import SortedSegment
 from deduplicate_lib.core.vector_store import InMemoryStore, VectorStore
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,9 @@ _SHIFT_31 = np.uint64(31)
 # Hashes persisted from one version are only comparable with hashes from the
 # same version; bump when fast_quantise_and_hash changes.
 HASH_VERSION = 1
+# Index delta segments (see ``MultiHashing._stage_pending_segment``): a new
+# segment absorbs an older one at most this many times its size.
+COMPACTION_RATIO = 2
 
 
 @njit
@@ -296,9 +301,14 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         self.sorted_hashes = [
             np.empty(0, dtype=np.uint64) for _ in range(self.perturbations)
         ]
+        # With an index: per perturbation, the memory-mapped delta segments
+        # written by appends since its base table (oldest first). Each holds
+        # hashes found in no other segment. Always empty without an index.
+        self._delta_hashes = [[] for _ in range(self.perturbations)]
         # Hashes of vectors appended since the last rebuild (or index commit),
-        # merged into sorted_hashes once they grow too large to scan cheaply.
-        self._pending_hashes = [set() for _ in range(self.perturbations)]
+        # merged into sorted_hashes once they grow too large to scan cheaply
+        # (sorted arrays, 8 bytes per hash; see PendingHashes).
+        self._pending_hashes = [PendingHashes() for _ in range(self.perturbations)]
         self._pending_total = 0
         # Leading dataset rows whose hashes are in the tables (incl. pending).
         self._rows_in_tables = 0
@@ -438,6 +448,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         self.unique_counts[:n_indexed] = index.load_counts()
         for perturbation in index.completed:
             self.sorted_hashes[perturbation] = index.load_table(perturbation)
+            self._delta_hashes[perturbation] = index.load_deltas(perturbation)
 
         todo = [p for p in range(self.perturbations) if p not in index.completed]
         if todo:
@@ -484,33 +495,52 @@ class MultiHashing(DuplicateDetectionAlgorithm):
                 "index_dir=... to keep them on disk, or raise memory_limit."
             )
 
+    def _segments(self, hash_index: int) -> list:
+        """The sorted segments holding the table of ``hash_index``: the base
+        table, then any delta segments of an index (newest first)."""
+        return [
+            self.sorted_hashes[hash_index],
+            *reversed(self._delta_hashes[hash_index]),
+        ]
+
     def _hash_seen(self, hash_index: int, hash_value: np.uint64) -> bool:
-        table = self.sorted_hashes[hash_index]
-        position = np.searchsorted(table, hash_value)
-        if position < table.shape[0] and table[position] == hash_value:
-            return True
-        return int(hash_value) in self._pending_hashes[hash_index]
+        for table in self._segments(hash_index):
+            if isinstance(table, SortedSegment):
+                if table.contains(hash_value):
+                    return True
+                continue
+            position = np.searchsorted(table, hash_value)
+            if position < table.shape[0] and table[position] == hash_value:
+                return True
+        return self._pending_hashes[hash_index].contains(hash_value)
 
     def _hashes_seen(self, hash_index: int, hash_values: np.ndarray) -> np.ndarray:
         """Vectorised :meth:`_hash_seen` for many hashes of one perturbation."""
-        table = self.sorted_hashes[hash_index]
-        positions = np.minimum(
-            np.searchsorted(table, hash_values), max(table.shape[0] - 1, 0)
-        )
-        seen = (
-            table[positions] == hash_values
-            if table.shape[0]
-            else np.zeros(hash_values.shape, dtype=bool)
-        )
+        seen = np.zeros(hash_values.shape, dtype=bool)
+        for table in self._segments(hash_index):
+            if not table.shape[0]:
+                continue
+            if isinstance(table, SortedSegment):
+                seen |= table.contains_many(hash_values)
+                continue
+            positions = np.minimum(
+                np.searchsorted(table, hash_values), table.shape[0] - 1
+            )
+            seen |= table[positions] == hash_values
         pending = self._pending_hashes[hash_index]
         if pending:
-            seen |= np.isin(
-                hash_values, np.fromiter(pending, dtype=np.uint64, count=len(pending))
-            )
+            seen |= pending.contains_many(hash_values)
         return seen
 
     def _clash_vector(self, hash_vector: np.ndarray) -> np.ndarray:
         """Whether each hash of a vector already occurs in the dataset."""
+        if self.index_dir is not None:
+            # memory-mapped segments: ask for every page these lookups will read
+            # first, so the disk reads them concurrently, not one fault at a time
+            for hash_index, hash_value in enumerate(hash_vector):
+                for table in self._segments(hash_index):
+                    if isinstance(table, SortedSegment):
+                        table.prefetch(hash_value)
         return np.array(
             [
                 self._hash_seen(hash_index, hash_value)
@@ -519,16 +549,25 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             dtype=bool,
         )
 
+    def _sorted_pending(self, hash_index: int) -> np.ndarray:
+        return self._pending_hashes[hash_index].sorted()
+
+    @staticmethod
+    def _merge_sorted(table: np.ndarray, new: np.ndarray) -> np.ndarray:
+        """Sorted union of two sorted arrays with no hash in common: a sorted
+        insert, O(n), unlike re-sorting with ``union1d``."""
+        table = np.asarray(table)
+        return np.insert(np.asarray(table), np.searchsorted(table, new), new)
+
     def _merged_table(self, hash_index: int) -> np.ndarray:
         """The table of ``hash_index`` with its pending hashes inserted, still sorted.
 
         Pending hashes are never in the table (only unseen hashes are added),
-        so a sorted insert suffices: O(n), unlike re-sorting with ``union1d``.
+        so a sorted insert suffices.
         """
-        pending = self._pending_hashes[hash_index]
-        pending = np.sort(np.fromiter(pending, dtype=np.uint64, count=len(pending)))
-        table = self.sorted_hashes[hash_index]
-        return np.insert(np.asarray(table), np.searchsorted(table, pending), pending)
+        return self._merge_sorted(
+            self.sorted_hashes[hash_index], self._sorted_pending(hash_index)
+        )
 
     def _merge_pending_hashes(self, hash_index: int) -> None:
         self.sorted_hashes[hash_index] = self._merged_table(hash_index)
@@ -555,8 +594,9 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         )
 
     def _pending_limit(self) -> int:
-        """Pending hashes (Python ints in sets, ~100 bytes each) kept before an index flush."""
-        return max(10_000, self.memory_limit // 4 // 100)
+        """Pending hashes kept before an index save: 8 bytes each in sorted
+        arrays, with room for merging them, within a quarter of ``memory_limit``."""
+        return max(10_000, self.memory_limit // 4 // 16)
 
     def _after_adding_hashes(self, touched) -> None:
         """Merge pending hashes that have grown large: into the in-memory tables,
@@ -609,7 +649,7 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             distinct, first_index = np.unique(hashes[hash_index], return_index=True)
             new = ~self._hashes_seen(hash_index, distinct)
             self.unique_counts[start + first_index[new]] += 1
-            self._pending_hashes[hash_index].update(distinct[new].tolist())
+            self._pending_hashes[hash_index].add_sorted(distinct[new])
             self._pending_total += int(new.sum())
         self._rows_in_tables = max(self._rows_in_tables, start + len(rows))
         self._after_adding_hashes(range(self.perturbations))
@@ -668,8 +708,35 @@ class MultiHashing(DuplicateDetectionAlgorithm):
             return
         self._save_index()
 
+    def _stage_pending_segment(self, hash_index: int) -> None:
+        """Stage the pending hashes of ``hash_index`` as a new delta segment.
+
+        Segments are compacted geometrically: the new segment absorbs the
+        newest existing delta while that one is at most ``COMPACTION_RATIO``
+        times its size, and becomes the new base table once it reaches that
+        ratio of the base too.  Delta sizes then grow geometrically, so a
+        table has O(log n) segments and each hash is rewritten O(log n) times:
+        a save writes about what was added, not the whole table.
+        """
+        segment = self._sorted_pending(hash_index)
+        deltas = self._delta_hashes[hash_index]
+        merged = 0
+        while merged < len(deltas) and (
+            deltas[-1 - merged].shape[0] <= COMPACTION_RATIO * segment.shape[0]
+        ):
+            segment = self._merge_sorted(deltas[-1 - merged], segment)
+            merged += 1
+        base = self.sorted_hashes[hash_index]
+        if (
+            merged == len(deltas)
+            and base.shape[0] <= COMPACTION_RATIO * segment.shape[0]
+        ):
+            self.index.write_table(hash_index, self._merge_sorted(base, segment))
+        else:
+            self.index.write_delta(hash_index, segment, replace_last=merged)
+
     def _save_index(self) -> None:
-        """Write the pending hashes into new table files and commit them with the counts."""
+        """Write the pending hashes into new segment files and commit them with the counts."""
 
         # Commit exactly the rows whose hashes are in the tables: a flush can
         # happen part-way through adding vectors, before vector_count moves on.
@@ -681,10 +748,15 @@ class MultiHashing(DuplicateDetectionAlgorithm):
         )
         changed = [p for p in range(self.perturbations) if self._pending_hashes[p]]
         for hash_index in changed:
-            self.index.write_table(hash_index, self._merged_table(hash_index))
-        self.index.commit(self.unique_counts[:rows], store)
+            self._stage_pending_segment(hash_index)
+        # a vector's count is final once it is in the tables, and only rows
+        # beyond the last commit were added since, so counts can be appended
+        self.index.commit(
+            self.unique_counts[:rows], store, unchanged_rows=self.index.n_vectors
+        )
         for hash_index in changed:
             self.sorted_hashes[hash_index] = self.index.load_table(hash_index)
+            self._delta_hashes[hash_index] = self.index.load_deltas(hash_index)
             self._pending_hashes[hash_index].clear()
         self._pending_total = 0
         logger.info("Saved the hash index %s (%d vectors).", self.index_dir, rows)
